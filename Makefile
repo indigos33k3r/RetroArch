@@ -3,7 +3,6 @@ include config.mk
 TARGET = retroarch tools/retroarch-joyconfig tools/retrolaunch/retrolaunch
 
 OBJ = frontend/frontend.o \
-		frontend/frontend_context.o \
 		retroarch.o \
 		file.o \
 		file_path.o \
@@ -91,7 +90,7 @@ ifneq ($(findstring Linux,$(OS)),)
 endif
 
 ifeq ($(HAVE_RGUI), 1)
-   OBJ += frontend/menu/menu_common.o file_list.o
+   OBJ += frontend/menu_common.o file_list.o
 	DEFINES += -DHAVE_MENU
 endif
 
@@ -460,7 +459,6 @@ uninstall:
 
 clean:
 	rm -f *.o 
-	rm -f frontend/menu/*.o
 	rm -f frontend/*.o
 	rm -f audio/*.o
 	rm -f conf/*.o

@@ -22,26 +22,27 @@
 #include <ctype.h>
 #include "menu_common.h"
 
-#include "../../gfx/gfx_common.h"
-#include "../../performance.h"
-#include "../../driver.h"
-#include "../../file.h"
-#include "../../file_ext.h"
-#include "../../input/input_common.h"
-#include "../../input/keyboard_line.h"
+#include "../gfx/gfx_common.h"
+#include "../performance.h"
+#include "../driver.h"
+#include "../input/input_common.h"
+#include "../input/keyboard_line.h"
 
-#include "../../compat/posix_string.h"
+#include "../compat/posix_string.h"
 
-#include "../../gfx/fonts/bitmap.h"
+#include "../gfx/fonts/bitmap.h"
 
 static uint16_t menu_framebuf[1440 * 900];
 
 #define TERM_START_X 15
-#define TERM_START_Y 27
+#define TERM_START_Y 15
 #define TERM_WIDTH (((rgui->width - TERM_START_X - 15) / (FONT_WIDTH_STRIDE)))
 #define TERM_HEIGHT (((rgui->height - TERM_START_Y - 15) / (FONT_HEIGHT_STRIDE)) - 1)
 
 rgui_handle_t *rgui;
+
+int num_items;
+int active_item;
 
 //forward decl
 static int menu_iterate_func(void *data, unsigned action);
@@ -109,8 +110,8 @@ static rgui_handle_t *rgui_init(void)
    rgui_handle_t *rgui = (rgui_handle_t*)calloc(1, sizeof(*rgui));
 
    rgui->frame_buf = framebuf;
-   rgui->width = 1440/2;
-   rgui->height = 900/2;
+   rgui->width = 1440;
+   rgui->height = 900;
    framebuf_pitch = rgui->width * sizeof(uint16_t);
 
    rgui->frame_buf_pitch = framebuf_pitch;
@@ -208,6 +209,14 @@ static uint16_t green_filler(unsigned x, unsigned y)
    return (col << 13) | (col << 9) | (col << 5) | (12 << 0);
 }
 
+static uint16_t hightlight_filler(unsigned x, unsigned y)
+{
+   x >>= 1;
+   y >>= 1;
+   unsigned col = 1;
+   return (col << 10) | (col << 9) | (col << 5) | (12 << 0);
+}
+
 static void fill_rect(uint16_t *buf, unsigned pitch,
       unsigned x, unsigned y,
       unsigned width, unsigned height,
@@ -259,6 +268,20 @@ static void rgui_render(void *data)
       end = begin + TERM_HEIGHT;
 
    render_background(rgui);
+
+   for (int i = 0; i < 3; i++)
+   {
+      if (i == active_item)
+      {
+         fill_rect(rgui->frame_buf, rgui->frame_buf_pitch,
+            100 + (200*i), 100, 100, 100, hightlight_filler);
+      }
+      else
+      {
+         fill_rect(rgui->frame_buf, rgui->frame_buf_pitch,
+            100 + (200*i), 100, 100, 100, green_filler);
+      }
+   }
 
    unsigned x, y;
    size_t i;
@@ -327,10 +350,6 @@ void load_menu_game_prepare(void)
          snprintf(str, sizeof(str), "INFO - Loading %s ...", tmp);
          msg_queue_push(g_extern.msg_queue, str, 1, 1);
       }
-
-#ifdef RARCH_CONSOLE
-      if (g_extern.system.no_game || *g_extern.fullpath)
-#endif
    }
 
    // redraw RGUI frame
@@ -417,6 +436,9 @@ bool load_menu_game(void)
 
 void menu_init(void)
 {
+   active_item = 0;
+   num_items = 3;
+
    rgui = rgui_init();
 
    strlcpy(rgui->base_path, g_settings.rgui_browser_directory, sizeof(rgui->base_path));
@@ -529,6 +551,7 @@ static uint64_t menu_input(void)
 
 static int menu_settings_iterate(void *data, unsigned action)
 {
+
    rgui_handle_t *rgui = (rgui_handle_t*)data;
    rgui->frame_buf_pitch = rgui->width * 2;
    unsigned type = 0;
@@ -570,28 +593,33 @@ static int menu_settings_iterate(void *data, unsigned action)
             rgui->selection_ptr = 0;
          break;
 
-      case RGUI_ACTION_OK:
-         if (type == RGUI_LAKKA_LAUNCH)
+      case RGUI_ACTION_LEFT:
+         if (active_item > 0)
          {
+            active_item--;
+         }
+         break;
+
+      case RGUI_ACTION_RIGHT:
+         if (active_item < num_items - 1)
+         {
+            active_item++;
+         }
+         break;
+
+      case RGUI_ACTION_OK:
+         if (active_item == 0) {
             strlcpy(g_extern.fullpath, "/home/kivutar/Jeux/roms/sonic3.smd", sizeof(g_extern.fullpath));
             strlcpy(g_settings.libretro, "/usr/lib/libretro/libretro-genplus.so", sizeof(g_settings.libretro));
             g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
-            rgui->need_refresh = true;
-            rgui->msg_force = true;
-         }
-         else if ((type == RGUI_SETTINGS_OPEN_FILEBROWSER || type == RGUI_SETTINGS_OPEN_FILEBROWSER_DEFERRED_CORE)
-               && action == RGUI_ACTION_OK)
+            return -1;
+         } 
+         else if (active_item == 1)
          {
-            rgui->defer_core = type == RGUI_SETTINGS_OPEN_FILEBROWSER_DEFERRED_CORE;
-            file_list_push(rgui->menu_stack, rgui->base_path, RGUI_FILE_DIRECTORY, rgui->selection_ptr);
-            rgui->selection_ptr = 0;
-            rgui->need_refresh = true;
-         }
-         else if ((menu_type_is(type) == RGUI_SETTINGS) && action == RGUI_ACTION_OK)
-         {
-            file_list_push(rgui->menu_stack, label, type, rgui->selection_ptr);
-            rgui->selection_ptr = 0;
-            rgui->need_refresh = true;
+            strlcpy(g_extern.fullpath, "/home/kivutar/Jeux/roms/zelda.smc", sizeof(g_extern.fullpath));
+            strlcpy(g_settings.libretro, "/usr/lib/libretro/libretro-snes9x-next.so", sizeof(g_settings.libretro));
+            g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
+            return -1;
          }
          break;
 
@@ -611,9 +639,7 @@ static int menu_settings_iterate(void *data, unsigned action)
    file_list_get_last(rgui->menu_stack, &dir, &menu_type);
 
    if (rgui->need_refresh && !(menu_type == RGUI_FILE_DIRECTORY ||
-            menu_type_is(menu_type) == RGUI_FILE_DIRECTORY ||
-            menu_type == RGUI_SETTINGS_CORE ||
-            menu_type == RGUI_SETTINGS_DISK_APPEND))
+            menu_type_is(menu_type) == RGUI_FILE_DIRECTORY))
    {
       rgui->need_refresh = false;
       menu_populate_entries(rgui, RGUI_SETTINGS);
@@ -624,206 +650,13 @@ static int menu_settings_iterate(void *data, unsigned action)
    return 0;
 }
 
-static inline void menu_descend_alphabet(void *data, size_t *ptr_out)
-{
-   rgui_handle_t *rgui = (rgui_handle_t*)data;
-   if (!rgui->scroll_indices_size)
-      return;
-   size_t ptr = *ptr_out;
-   if (ptr == 0)
-      return;
-   size_t i = rgui->scroll_indices_size - 1;
-   while (i && rgui->scroll_indices[i - 1] >= ptr)
-      i--;
-   *ptr_out = rgui->scroll_indices[i - 1];
-}
-
-static inline void menu_ascend_alphabet(void *data, size_t *ptr_out)
-{
-   rgui_handle_t *rgui = (rgui_handle_t*)data;
-   if (!rgui->scroll_indices_size)
-      return;
-   size_t ptr = *ptr_out;
-   if (ptr == rgui->scroll_indices[rgui->scroll_indices_size - 1])
-      return;
-   size_t i = 0;
-   while (i < rgui->scroll_indices_size - 1 && rgui->scroll_indices[i + 1] <= ptr)
-      i++;
-   *ptr_out = rgui->scroll_indices[i + 1];
-}
-
-static void menu_flush_stack_type(void *data, unsigned final_type)
-{
-   rgui_handle_t *rgui = (rgui_handle_t*)data;
-   unsigned type;
-   type = 0;
-   rgui->need_refresh = true;
-   file_list_get_last(rgui->menu_stack, NULL, &type);
-   while (type != final_type)
-   {
-      file_list_pop(rgui->menu_stack, &rgui->selection_ptr);
-      file_list_get_last(rgui->menu_stack, NULL, &type);
-   }
-}
-
 static int menu_iterate_func(void *data, unsigned action)
 {
    rgui_handle_t *rgui = (rgui_handle_t*)data;
 
-   const char *dir = 0;
-   unsigned menu_type = 0;
-   file_list_get_last(rgui->menu_stack, &dir, &menu_type);
-   int ret = 0;
-
    rgui_set_texture(rgui, false);
 
-   if (menu_type_is(menu_type) == RGUI_SETTINGS)
-      return menu_settings_iterate(rgui, action);
-
-   if (rgui->need_refresh && action != RGUI_ACTION_MESSAGE)
-      action = RGUI_ACTION_NOOP;
-
-   unsigned scroll_speed = (max(rgui->scroll_accel, 2) - 2) / 4 + 1;
-   unsigned fast_scroll_speed = 4 + 4 * scroll_speed;
-
-   switch (action)
-   {
-      case RGUI_ACTION_UP:
-         if (rgui->selection_ptr >= scroll_speed)
-            rgui->selection_ptr -= scroll_speed;
-         else
-            rgui->selection_ptr = rgui->selection_buf->size - 1;
-         break;
-
-      case RGUI_ACTION_DOWN:
-         if (rgui->selection_ptr + scroll_speed < rgui->selection_buf->size)
-            rgui->selection_ptr += scroll_speed;
-         else
-            rgui->selection_ptr = 0;
-         break;
-
-      case RGUI_ACTION_LEFT:
-         if (rgui->selection_ptr > fast_scroll_speed)
-            rgui->selection_ptr -= fast_scroll_speed;
-         else
-            rgui->selection_ptr = 0;
-         break;
-
-      case RGUI_ACTION_RIGHT:
-         if (rgui->selection_ptr + fast_scroll_speed < rgui->selection_buf->size)
-            rgui->selection_ptr += fast_scroll_speed;
-         else
-            rgui->selection_ptr = rgui->selection_buf->size - 1;
-         break;
-
-      case RGUI_ACTION_SCROLL_UP:
-         menu_descend_alphabet(rgui, &rgui->selection_ptr);
-         break;
-      case RGUI_ACTION_SCROLL_DOWN:
-         menu_ascend_alphabet(rgui, &rgui->selection_ptr);
-         break;
-      
-      case RGUI_ACTION_CANCEL:
-         if (rgui->menu_stack->size > 1)
-         {
-            rgui->need_refresh = true;
-            file_list_pop(rgui->menu_stack, &rgui->selection_ptr);
-         }
-         break;
-
-      case RGUI_ACTION_OK:
-      {
-         if (rgui->selection_buf->size == 0)
-            return 0;
-
-         const char *path = 0;
-         unsigned type = 0;
-         file_list_get_at_offset(rgui->selection_buf, rgui->selection_ptr, &path, &type);
-
-         if (type == RGUI_FILE_DIRECTORY)
-         {
-            char cat_path[PATH_MAX];
-            fill_pathname_join(cat_path, dir, path, sizeof(cat_path));
-
-            file_list_push(rgui->menu_stack, cat_path, type, rgui->selection_ptr);
-            rgui->selection_ptr = 0;
-            rgui->need_refresh = true;
-         }
-         else
-         {
-            if (rgui->defer_core)
-            {
-               fill_pathname_join(rgui->deferred_path, dir, path, sizeof(rgui->deferred_path));
-
-               const core_info_t *info = NULL;
-               size_t supported = 0;
-               if (rgui->core_info)
-                  core_info_list_get_supported_cores(rgui->core_info, rgui->deferred_path, &info, &supported);
-
-               if (supported == 1) // Can make a decision right now.
-               {
-                  strlcpy(g_extern.fullpath, "/home/kivutar/Jeux/roms/sonic3.smd", sizeof(g_extern.fullpath));
-                  strlcpy(g_settings.libretro, "/usr/lib/libretro/libretro-genplus.so", sizeof(g_settings.libretro));
-
-                  //libretro_free_system_info(&rgui->info);
-                  /*libretro_get_system_info(g_settings.libretro, &rgui->info,
-                        &rgui->load_no_rom);*/
-                  g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
-
-                  menu_flush_stack_type(rgui, RGUI_SETTINGS);
-                  rgui->msg_force = true;
-                  ret = -1;
-               }
-               else // Present a selection.
-               {
-                  file_list_push(rgui->menu_stack, rgui->libretro_dir, RGUI_SETTINGS_DEFERRED_CORE, rgui->selection_ptr);
-                  rgui->selection_ptr = 0;
-                  rgui->need_refresh = true;
-               }
-            }
-            else
-            {
-               fill_pathname_join(g_extern.fullpath, dir, path, sizeof(g_extern.fullpath));
-               g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
-
-               menu_flush_stack_type(rgui, RGUI_SETTINGS);
-               rgui->msg_force = true;
-               ret = -1;
-            }
-         }
-         break;
-      }
-
-      case RGUI_ACTION_REFRESH:
-         rgui->selection_ptr = 0;
-         rgui->need_refresh = true;
-         break;
-
-      case RGUI_ACTION_MESSAGE:
-         rgui->msg_force = true;
-         break;
-
-      default:
-         break;
-   }
-
-
-   // refresh values in case the stack changed
-   file_list_get_last(rgui->menu_stack, &dir, &menu_type);
-
-   if (rgui->need_refresh && (menu_type == RGUI_FILE_DIRECTORY ||
-            menu_type_is(menu_type) == RGUI_FILE_DIRECTORY || 
-            menu_type == RGUI_SETTINGS_DEFERRED_CORE ||
-            menu_type == RGUI_SETTINGS_CORE ||
-            menu_type == RGUI_SETTINGS_DISK_APPEND))
-   {
-      rgui->need_refresh = false;
-      menu_parse_and_resolve(rgui, menu_type);
-   }
-
-   rgui_render(rgui);
-
-   return ret;
+   return menu_settings_iterate(rgui, action);
 }
 
 bool menu_iterate(void)
@@ -907,7 +740,7 @@ bool menu_iterate(void)
    else if (rgui->trigger_state & (1ULL << RETRO_DEVICE_ID_JOYPAD_START))
       action = RGUI_ACTION_START;
 
-   input_entry_ret = menu_iterate_func(rgui, action);
+   input_entry_ret = menu_iterate_func(rgui, action); // ret = -1 to launch
 
    if (driver.video_poke && driver.video_poke->set_texture_enable)
       driver.video_poke->set_texture_enable(driver.video_data, rgui->frame_buf_show, MENU_TEXTURE_FULLSCREEN);
@@ -949,72 +782,13 @@ deinit:
    return false;
 }
 
-void menu_poll_bind_state(struct rgui_bind_state *state)
-{
-   unsigned i, b, a, h;
-   memset(state->state, 0, sizeof(state->state));
-   state->skip = input_input_state_func(NULL, 0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RETURN);
-
-   const rarch_joypad_driver_t *joypad = NULL;
-   if (driver.input && driver.input_data && driver.input->get_joypad_driver)
-      joypad = driver.input->get_joypad_driver(driver.input_data);
-
-   if (!joypad)
-   {
-      RARCH_ERR("Cannot poll raw joypad state.");
-      return;
-   }
-
-   input_joypad_poll(joypad);
-   for (i = 0; i < MAX_PLAYERS; i++)
-   {
-      for (b = 0; b < RGUI_MAX_BUTTONS; b++)
-         state->state[i].buttons[b] = input_joypad_button_raw(joypad, i, b);
-      for (a = 0; a < RGUI_MAX_AXES; a++)
-         state->state[i].axes[a] = input_joypad_axis_raw(joypad, i, a);
-      for (h = 0; h < RGUI_MAX_HATS; h++)
-      {
-         state->state[i].hats[h] |= input_joypad_hat_raw(joypad, i, HAT_UP_MASK, h) ? HAT_UP_MASK : 0;
-         state->state[i].hats[h] |= input_joypad_hat_raw(joypad, i, HAT_DOWN_MASK, h) ? HAT_DOWN_MASK : 0;
-         state->state[i].hats[h] |= input_joypad_hat_raw(joypad, i, HAT_LEFT_MASK, h) ? HAT_LEFT_MASK : 0;
-         state->state[i].hats[h] |= input_joypad_hat_raw(joypad, i, HAT_RIGHT_MASK, h) ? HAT_RIGHT_MASK : 0;
-      }
-   }
-}
-
-void menu_poll_bind_get_rested_axes(struct rgui_bind_state *state)
-{
-   unsigned i, a;
-   const rarch_joypad_driver_t *joypad = NULL;
-   if (driver.input && driver.input_data && driver.input->get_joypad_driver)
-      joypad = driver.input->get_joypad_driver(driver.input_data);
-
-   if (!joypad)
-   {
-      RARCH_ERR("Cannot poll raw joypad state.");
-      return;
-   }
-
-   for (i = 0; i < MAX_PLAYERS; i++)
-      for (a = 0; a < RGUI_MAX_AXES; a++)
-         state->axis_state[i].rested_axes[a] = input_joypad_axis_raw(joypad, i, a);
-}
-
-static inline bool menu_list_elem_is_dir(file_list_t *buf, unsigned offset)
-{
-   const char *path = NULL;
-   unsigned type = 0;
-   file_list_get_at_offset(buf, offset, &path, &type);
-   return type != RGUI_FILE_PLAIN;
-}
-
 void menu_populate_entries(void *data, unsigned menu_type)
 {
    rgui_handle_t *rgui = (rgui_handle_t*)data;
 
    file_list_clear(rgui->selection_buf);
-   file_list_push(rgui->selection_buf, "Load Content (Detect Core)", RGUI_SETTINGS_OPEN_FILEBROWSER_DEFERRED_CORE, 0);
-   file_list_push(rgui->selection_buf, "Lakka", RGUI_LAKKA_LAUNCH, 0);
+   file_list_push(rgui->selection_buf, "Sonic 3", RGUI_LAKKA_LAUNCH, 0);
+   file_list_push(rgui->selection_buf, "Lakka",   RGUI_LAKKA_LAUNCH, 0);
 
    if (g_extern.main_is_init && !g_extern.libretro_dummy)
    {
@@ -1028,10 +802,8 @@ void menu_populate_entries(void *data, unsigned menu_type)
 
 void menu_parse_and_resolve(void *data, unsigned menu_type)
 {
-   const core_info_t *info = NULL;
    const char *dir;
-   size_t i, list_size;
-   file_list_t *list;
+   size_t i;
    rgui_handle_t *rgui;
 
    rgui = (rgui_handle_t*)data;
@@ -1039,76 +811,34 @@ void menu_parse_and_resolve(void *data, unsigned menu_type)
 
    file_list_clear(rgui->selection_buf);
 
-   // parsing switch
-   switch (menu_type)
+   /* Directory parse */
+   file_list_get_last(rgui->menu_stack, &dir, &menu_type);
+
+   struct string_list *list = dir_list_new(dir, ".smd|.sms", true);
+   if (!list)
+      return;
+
+   dir_list_sort(list, true);
+
+   for (i = 0; i < list->size; i++)
    {
-      case RGUI_SETTINGS_DEFERRED_CORE:
-         break;
-      default:
-         {
-            /* Directory parse */
-            file_list_get_last(rgui->menu_stack, &dir, &menu_type);
+      bool is_dir = list->elems[i].attr.b;
 
-            if (!*dir)
-            {
-               file_list_push(rgui->selection_buf, "/", menu_type, 0);
-               return;
-            }
+      if ((menu_type_is(menu_type) == RGUI_FILE_DIRECTORY) && !is_dir)
+         continue;
 
-            const char *exts;
-            char ext_buf[1024];
-            if (menu_type == RGUI_SETTINGS_CORE)
-               exts = EXT_EXECUTABLES;
-            else if (menu_type_is(menu_type) == RGUI_FILE_DIRECTORY)
-               exts = ""; // we ignore files anyway
-            else if (rgui->defer_core)
-               exts = rgui->core_info ? core_info_list_get_all_extensions(rgui->core_info) : "";
-            else if (rgui->info.valid_extensions)
-            {
-               exts = ext_buf;
-               if (*rgui->info.valid_extensions)
-                  snprintf(ext_buf, sizeof(ext_buf), "%s|zip", rgui->info.valid_extensions);
-               else
-                  *ext_buf = '\0';
-            }
-            else
-               exts = g_extern.system.valid_extensions;
+      // Need to preserve slash first time.
+      const char *path = list->elems[i].data;
+      if (*dir)
+         path = path_basename(path);
 
-            struct string_list *list = dir_list_new(dir, exts, true);
-            if (!list)
-               return;
-
-            dir_list_sort(list, true);
-
-            if (menu_type_is(menu_type) == RGUI_FILE_DIRECTORY)
-               file_list_push(rgui->selection_buf, "<Use this directory>", RGUI_FILE_USE_DIRECTORY, 0);
-
-            for (i = 0; i < list->size; i++)
-            {
-               bool is_dir = list->elems[i].attr.b;
-
-               if ((menu_type_is(menu_type) == RGUI_FILE_DIRECTORY) && !is_dir)
-                  continue;
-
-#ifdef HAVE_LIBRETRO_MANAGEMENT
-               if (menu_type == RGUI_SETTINGS_CORE && (is_dir || strcasecmp(list->elems[i].data, SALAMANDER_FILE) == 0))
-                  continue;
-#endif
-
-               // Need to preserve slash first time.
-               const char *path = list->elems[i].data;
-               if (*dir)
-                  path = path_basename(path);
-
-               // Push menu_type further down in the chain.
-               // Needed for shader manager currently.
-               file_list_push(rgui->selection_buf, path,
-                     is_dir ? menu_type : RGUI_FILE_PLAIN, 0);
-            }
-
-            string_list_free(list);
-         }
+      // Push menu_type further down in the chain.
+      file_list_push(rgui->selection_buf, path,
+            is_dir ? menu_type : RGUI_FILE_PLAIN, 0);
    }
+
+   string_list_free(list);
+
 
    rgui->scroll_indices_size = 0;
 

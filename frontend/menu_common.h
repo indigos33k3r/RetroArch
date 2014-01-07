@@ -17,14 +17,14 @@
 #ifndef MENU_COMMON_H__
 #define MENU_COMMON_H__
 
-#include "../../general.h"
+#include "../general.h"
 
 #ifdef HAVE_CONFIG_H
-#include "../../config.h"
+#include "../config.h"
 #endif
 
-#include "../../performance.h"
-#include "../../core_info.h"
+#include "../performance.h"
+#include "../core_info.h"
 
 #define MENU_TEXTURE_FULLSCREEN false
 
@@ -34,7 +34,7 @@
 extern "C" {
 #endif
 
-#include "../../file_list.h"
+#include "../file_list.h"
 
 typedef enum
 {
