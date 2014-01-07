@@ -45,7 +45,6 @@ static void rarch_get_environment_console(void)
    init_libretro_sym(false);
    rarch_init_system_info();
 
-#ifdef HAVE_LIBRETRO_MANAGEMENT
    char basename[PATH_MAX];
    char basename_new[PATH_MAX];
    char old_path[PATH_MAX];
@@ -83,7 +82,6 @@ static void rarch_get_environment_console(void)
          RARCH_LOG("Renamed core successfully to: %s.\n", new_path);
       }
    }
-#endif
 
    global_init_drivers();
 }
@@ -169,12 +167,6 @@ static void rarch_get_environment_console(void)
 #define initial_menu_lifecycle_state (1ULL << MODE_GAME)
 #endif
 
-#if !defined(RARCH_CONSOLE) && !defined(HAVE_BB10) && !defined(ANDROID) && !defined(EMSCRIPTEN)
-#define attempt_load_game_push_history true
-#else
-#define attempt_load_game_push_history false
-#endif
-
 #ifndef RARCH_CONSOLE
 #define rarch_get_environment_console() (void)0
 #endif
@@ -232,7 +224,6 @@ returntype main_entry(signature())
       if ((init_ret = rarch_main_init(argc, argv))) return_var(init_ret);
    }
 
-#if defined(HAVE_MENU)
    if (menu_init_enable)
       menu_init();
 
@@ -242,13 +233,11 @@ returntype main_entry(signature())
    if (!initial_lifecycle_state_preinit)
       g_extern.lifecycle_state |= initial_menu_lifecycle_state;
 
-   if (attempt_load_game_push_history)
-   {
-      // If we started a ROM directly from command line,
-      // push it to ROM history.
-      if (!g_extern.libretro_dummy)
-         menu_rom_history_push_current();
-   }
+
+// YOUPI
+/*strlcpy(g_extern.fullpath, "/home/kivutar/Jeux/roms/sonic3.smd", sizeof(g_extern.fullpath));
+strlcpy(g_settings.libretro, "/usr/lib/libretro/libretro-genplus.so", sizeof(g_settings.libretro));
+g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);*/
 
    do
    {
@@ -355,9 +344,6 @@ returntype main_entry(signature())
 
    if (g_extern.config_save_on_exit && *g_extern.config_path)
       config_save_file(g_extern.config_path);
-#else
-   while_iter ((g_extern.is_paused && !g_extern.is_oneshot) ? rarch_main_idle_iterate() : rarch_main_iterate());
-#endif
 
    if (g_extern.lifecycle_state & (1ULL << MODE_GAME_ONESHOT))
          returnfunc_oneshot();

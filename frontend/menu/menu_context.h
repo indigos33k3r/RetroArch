@@ -27,7 +27,6 @@
 typedef struct menu_ctx_driver
 {
    void  (*set_texture)(void*, bool);
-   void  (*render_messagebox)(void*, const char*);
    void  (*render)(void*);
    void* (*init)(void);
    void  (*free)(void*);

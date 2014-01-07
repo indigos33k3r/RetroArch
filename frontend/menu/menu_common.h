@@ -41,15 +41,6 @@ extern "C" {
 
 #include "../../file_list.h"
 
-#if defined(HAVE_CG) || defined(HAVE_HLSL) || defined(HAVE_GLSL)
-#define HAVE_SHADER_MANAGER
-#include "../../gfx/shader_parse.h"
-#endif
-
-#include "history.h"
-
-#define RGUI_MAX_SHADERS 8
-
 typedef enum
 {
    RGUI_FILE_PLAIN,
@@ -60,7 +51,6 @@ typedef enum
    RGUI_START_SCREEN,
 
    // Shader stuff
-   RGUI_SETTINGS_VIDEO_OPTIONS,
    RGUI_SETTINGS_VIDEO_OPTIONS_FIRST,
    RGUI_SETTINGS_VIDEO_RESOLUTION,
    RGUI_SETTINGS_VIDEO_PAL60,
@@ -68,7 +58,6 @@ typedef enum
    RGUI_SETTINGS_VIDEO_SOFT_FILTER,
    RGUI_SETTINGS_FLICKER_FILTER,
    RGUI_SETTINGS_SOFT_DISPLAY_FILTER,
-   RGUI_SETTINGS_VIDEO_GAMMA,
    RGUI_SETTINGS_VIDEO_INTEGER_SCALE,
    RGUI_SETTINGS_VIDEO_ASPECT_RATIO,
    RGUI_SETTINGS_CUSTOM_VIEWPORT,
@@ -86,31 +75,15 @@ typedef enum
    RGUI_SETTINGS_VIDEO_CROP_OVERSCAN,
    RGUI_SETTINGS_VIDEO_REFRESH_RATE_AUTO,
    RGUI_SETTINGS_VIDEO_OPTIONS_LAST,
-   RGUI_SETTINGS_SHADER_OPTIONS,
-   RGUI_SETTINGS_SHADER_FILTER,
-   RGUI_SETTINGS_SHADER_PRESET,
-   RGUI_SETTINGS_SHADER_APPLY,
-   RGUI_SETTINGS_SHADER_PASSES,
-   RGUI_SETTINGS_SHADER_0,
-   RGUI_SETTINGS_SHADER_0_FILTER,
-   RGUI_SETTINGS_SHADER_0_SCALE,
-   RGUI_SETTINGS_SHADER_LAST = RGUI_SETTINGS_SHADER_0_SCALE + (3 * (RGUI_MAX_SHADERS - 1)),
-   RGUI_SETTINGS_SHADER_PRESET_SAVE,
 
    // settings options are done here too
    RGUI_SETTINGS_OPEN_FILEBROWSER,
    RGUI_SETTINGS_OPEN_FILEBROWSER_DEFERRED_CORE,
-   RGUI_SETTINGS_OPEN_HISTORY,
    RGUI_SETTINGS_CORE,
    RGUI_SETTINGS_DEFERRED_CORE,
-   RGUI_SETTINGS_CONFIG,
    RGUI_SETTINGS_SAVE_CONFIG,
    RGUI_SETTINGS_CORE_OPTIONS,
-   RGUI_SETTINGS_AUDIO_OPTIONS,
-   RGUI_SETTINGS_INPUT_OPTIONS,
    RGUI_SETTINGS_PATH_OPTIONS,
-   RGUI_SETTINGS_OPTIONS,
-   RGUI_SETTINGS_DRIVERS,
    RGUI_SETTINGS_REWIND_ENABLE,
    RGUI_SETTINGS_REWIND_GRANULARITY,
    RGUI_SETTINGS_CONFIG_SAVE_ON_EXIT,
@@ -128,7 +101,6 @@ typedef enum
    RGUI_SETTINGS_GPU_SCREENSHOT,
    RGUI_SCREENSHOT_DIR_PATH,
    RGUI_BROWSER_DIR_PATH,
-   RGUI_SHADER_DIR_PATH,
    RGUI_SAVESTATE_DIR_PATH,
    RGUI_SAVEFILE_DIR_PATH,
    RGUI_LIBRETRO_DIR_PATH,
@@ -188,6 +160,8 @@ typedef enum
    RGUI_SETTINGS_CUSTOM_BIND_ALL,
    RGUI_SETTINGS_CUSTOM_BIND_DEFAULT_ALL,
 
+   RGUI_LAKKA_LAUNCH,
+
    RGUI_SETTINGS_CORE_OPTION_NONE = 0xffff,
    RGUI_SETTINGS_CORE_OPTION_START = 0x10000
 } rgui_file_type_t;
@@ -243,35 +217,6 @@ void menu_poll_bind_get_rested_axes(struct rgui_bind_state *state);
 void menu_poll_bind_state(struct rgui_bind_state *state);
 bool menu_poll_find_trigger(struct rgui_bind_state *state, struct rgui_bind_state *new_state);
 
-#ifdef GEKKO
-enum
-{
-   GX_RESOLUTIONS_512_192 = 0,
-   GX_RESOLUTIONS_598_200,
-   GX_RESOLUTIONS_640_200,
-   GX_RESOLUTIONS_384_224,
-   GX_RESOLUTIONS_448_224,
-   GX_RESOLUTIONS_480_224,
-   GX_RESOLUTIONS_512_224,
-   GX_RESOLUTIONS_340_232,
-   GX_RESOLUTIONS_512_232,
-   GX_RESOLUTIONS_512_236,
-   GX_RESOLUTIONS_336_240,
-   GX_RESOLUTIONS_384_240,
-   GX_RESOLUTIONS_512_240,
-   GX_RESOLUTIONS_576_224,
-   GX_RESOLUTIONS_608_224,
-   GX_RESOLUTIONS_640_224,
-   GX_RESOLUTIONS_530_240,
-   GX_RESOLUTIONS_640_240,
-   GX_RESOLUTIONS_512_448,
-   GX_RESOLUTIONS_640_448, 
-   GX_RESOLUTIONS_640_480,
-   GX_RESOLUTIONS_LAST,
-};
-#endif
-
-
 typedef struct
 {
    uint64_t old_input_state;
@@ -316,12 +261,8 @@ typedef struct
    struct retro_system_info info;
    bool load_no_rom;
 
-#ifdef HAVE_SHADER_MANAGER
-   struct gfx_shader shader;
-#endif
    unsigned current_pad;
 
-   rom_history_t *history;
    rarch_time_t last_time; // Used to throttle RGUI in case VSync is broken.
 
    struct rgui_bind_state binds;
@@ -339,19 +280,7 @@ void menu_init(void);
 bool menu_iterate(void);
 void menu_free(void);
 
-#if defined(HAVE_RMENU_XUI)
-int rmenu_xui_iterate(void *data, unsigned action);
-#endif
-
 int rgui_input_postprocess(void *data, uint64_t old_state);
-
-#ifdef HAVE_SHADER_MANAGER
-void shader_manager_init(void *data);
-void shader_manager_get_str(struct gfx_shader *shader,
-      char *type_str, size_t type_str_size, unsigned type);
-void shader_manager_set_preset(struct gfx_shader *shader,
-      enum rarch_shader_type type, const char *path);
-#endif
 
 void menu_ticker_line(char *buf, size_t len, unsigned tick, const char *str, bool selected);
 
@@ -361,11 +290,7 @@ void menu_init_core_info(void *data);
 
 void load_menu_game_prepare(void);
 bool load_menu_game(void);
-void load_menu_game_history(unsigned game_index);
 extern void load_menu_game_new_core(void);
-void menu_rom_history_push(const char *path, const char *core_path,
-      const char *core_name);
-void menu_rom_history_push_current(void);
 
 bool menu_replace_config(const char *path);
 
