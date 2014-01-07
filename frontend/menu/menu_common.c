@@ -32,7 +32,11 @@
 
 #include "../../compat/posix_string.h"
 
- #include "../../gfx/fonts/bitmap.h"
+#include "../../gfx/fonts/bitmap.h"
+
+static uint16_t menu_framebuf[1440 * 900];
+
+bool menu_ready;
 
 #define TERM_START_X 15
 #define TERM_START_Y 27
@@ -40,10 +44,127 @@
 #define TERM_HEIGHT (((rgui->height - TERM_START_Y - 15) / (FONT_HEIGHT_STRIDE)) - 1)
 
 rgui_handle_t *rgui;
-const menu_ctx_driver_t *menu_ctx;
 
 //forward decl
 static int menu_iterate_func(void *data, unsigned action);
+
+static void rgui_copy_glyph(uint8_t *glyph, const uint8_t *buf)
+{
+   int y, x;
+   for (y = 0; y < FONT_HEIGHT; y++)
+   {
+      for (x = 0; x < FONT_WIDTH; x++)
+      {
+         uint32_t col =
+            ((uint32_t)buf[3 * (-y * 256 + x) + 0] << 0) |
+            ((uint32_t)buf[3 * (-y * 256 + x) + 1] << 8) |
+            ((uint32_t)buf[3 * (-y * 256 + x) + 2] << 16);
+
+         uint8_t rem = 1 << ((x + y * FONT_WIDTH) & 7);
+         unsigned offset = (x + y * FONT_WIDTH) >> 3;
+
+         if (col != 0xff)
+            glyph[offset] |= rem;
+      }
+   }
+}
+
+static void init_font(rgui_handle_t *rgui, const uint8_t *font_bmp_buf)
+{
+   unsigned i;
+   uint8_t *font = (uint8_t *) calloc(1, FONT_OFFSET(256));
+   rgui->alloc_font = true;
+   for (i = 0; i < 256; i++)
+   {
+      unsigned y = i / 16;
+      unsigned x = i % 16;
+      rgui_copy_glyph(&font[FONT_OFFSET(i)],
+            font_bmp_buf + 54 + 3 * (256 * (255 - 16 * y) + 16 * x));
+   }
+
+   rgui->font = font;
+}
+
+static bool rguidisp_init_font(void *data)
+{
+   rgui_handle_t *rgui = (rgui_handle_t*)data;
+
+   const uint8_t *font_bmp_buf = NULL;
+   const uint8_t *font_bin_buf = bitmap_bin;
+   bool ret = true;
+
+   if (font_bmp_buf)
+      init_font(rgui, font_bmp_buf);
+   else if (font_bin_buf)
+      rgui->font = font_bin_buf;
+   else
+      ret = false;
+
+   return ret;
+}
+
+static rgui_handle_t *rgui_init(void)
+{
+   uint16_t *framebuf = menu_framebuf;
+   size_t framebuf_pitch;
+
+   rgui_handle_t *rgui = (rgui_handle_t*)calloc(1, sizeof(*rgui));
+
+   rgui->frame_buf = framebuf;
+   rgui->width = 1440/2;
+   rgui->height = 900/2;
+   framebuf_pitch = rgui->width * sizeof(uint16_t);
+
+   rgui->frame_buf_pitch = framebuf_pitch;
+
+   bool ret = rguidisp_init_font(rgui);
+
+   if (!ret)
+   {
+      RARCH_ERR("No font bitmap or binary, abort");
+      /* TODO - should be refactored - perhaps don't do rarch_fail but instead
+       * exit program */
+      g_extern.lifecycle_state &= ~((1ULL << MODE_MENU) | (1ULL << MODE_GAME));
+
+      RARCH_ERR("Could not initialize menu.\n");
+      rarch_fail(1, "menu_init()");
+   }
+
+   return rgui;
+}
+
+int rgui_input_postprocess(void *data, uint64_t old_state)
+{
+   (void)data;
+
+   int ret = 0;
+
+   if ((rgui->trigger_state & (1ULL << RARCH_MENU_TOGGLE)) &&
+         g_extern.main_is_init &&
+         !g_extern.libretro_dummy)
+   {
+      g_extern.lifecycle_state |= (1ULL << MODE_GAME);
+      ret = -1;
+   }
+
+   return ret;
+}
+
+void rgui_set_texture(void *data, bool enable)
+{
+   rgui_handle_t *rgui = (rgui_handle_t*)data;
+
+   if (driver.video_poke && driver.video_poke->set_texture_enable)
+      driver.video_poke->set_texture_frame(driver.video_data, menu_framebuf,
+            enable, rgui->width, rgui->height, 1.0f);
+}
+
+static void rgui_free(void *data)
+{
+   rgui_handle_t *rgui = (rgui_handle_t*)data;
+   if (rgui->alloc_font)
+      free((uint8_t*)rgui->font);
+}
 
 static void blit_line(rgui_handle_t *rgui,
       int x, int y, const char *message, bool green)
@@ -241,7 +362,7 @@ void load_menu_game_prepare(void)
    rgui->do_held = false;
    rgui->msg_force = true;
 
-   if (menu_ctx)
+   if (menu_ready)
       menu_iterate_func(rgui, RGUI_ACTION_NOOP);
 
    // Draw frame for loading message
@@ -321,11 +442,8 @@ bool load_menu_game(void)
 
 void menu_init(void)
 {
-   if (!menu_ctx_init_first(&menu_ctx, ((void**)&rgui)))
-   {
-      RARCH_ERR("Could not initialize menu.\n");
-      rarch_fail(1, "menu_init()");
-   }
+   rgui = rgui_init();
+   menu_ready = true;
 
    strlcpy(rgui->base_path, g_settings.rgui_browser_directory, sizeof(rgui->base_path));
    rgui->menu_stack = (file_list_t*)calloc(1, sizeof(file_list_t));
@@ -349,8 +467,8 @@ void menu_init(void)
 
 void menu_free(void)
 {
-   if (menu_ctx && menu_ctx->free)
-      menu_ctx->free(rgui);
+   if (menu_ready)
+      rgui_free(rgui);
 
 #ifdef HAVE_DYNAMIC
    libretro_free_system_info(&rgui->info);
@@ -444,7 +562,7 @@ static int menu_custom_bind_iterate(void *data, unsigned action)
    rgui_handle_t *rgui = (rgui_handle_t*)data;
    (void)action; // Have to ignore action here. Only bind that should work here is Quit RetroArch or something like that.
 
-   if (menu_ctx)
+   if (menu_ready)
       rgui_render(rgui);
 
    char msg[256];
@@ -571,7 +689,7 @@ static int menu_settings_iterate(void *data, unsigned action)
          menu_populate_entries(rgui, RGUI_SETTINGS);
    }
 
-   if (menu_ctx)
+   if (menu_ready)
       rgui_render(rgui);
 
    return 0;
@@ -642,8 +760,8 @@ static int menu_iterate_func(void *data, unsigned action)
    file_list_get_last(rgui->menu_stack, &dir, &menu_type);
    int ret = 0;
 
-   if (menu_ctx && menu_ctx->set_texture)
-      menu_ctx->set_texture(rgui, false);
+   if (menu_ready)
+      rgui_set_texture(rgui, false);
 
    if (menu_type_is(menu_type) == RGUI_SETTINGS)
       return menu_settings_iterate(rgui, action);
@@ -890,10 +1008,7 @@ static int menu_iterate_func(void *data, unsigned action)
       menu_parse_and_resolve(rgui, menu_type);
    }
 
-   if (menu_ctx && menu_ctx->iterate)
-      menu_ctx->iterate(rgui, action);
-
-   if (menu_ctx)
+   if (menu_ready)
       rgui_render(rgui);
 
    return ret;
@@ -980,7 +1095,7 @@ bool menu_iterate(void)
    else if (rgui->trigger_state & (1ULL << RETRO_DEVICE_ID_JOYPAD_START))
       action = RGUI_ACTION_START;
 
-   if (menu_ctx)
+   if (menu_ready)
       input_entry_ret = menu_iterate_func(rgui, action);
 
    if (driver.video_poke && driver.video_poke->set_texture_enable)
