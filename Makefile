@@ -91,7 +91,7 @@ ifneq ($(findstring Linux,$(OS)),)
 endif
 
 ifeq ($(HAVE_RGUI), 1)
-   OBJ += frontend/menu/menu_common.o file_list.o frontend/menu/history.o
+   OBJ += frontend/menu/menu_common.o file_list.o
 	DEFINES += -DHAVE_MENU
 endif
 
