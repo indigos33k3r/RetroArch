@@ -177,20 +177,6 @@ static void rarch_get_environment_console(void)
 #define attempt_load_game_fails (1ULL << MODE_EXIT)
 #endif
 
-#if defined(EMSCRIPTEN)
-#define frontend_init_enable false
-#define menu_init_enable false
-#else
-#define frontend_init_enable true
-#define menu_init_enable true
-#endif
-
-#if defined(EMSCRIPTEN)
-#define initial_lifecycle_state_preinit true
-#else
-#define initial_lifecycle_state_preinit false
-#endif
-
 returntype main_entry(signature())
 {
    declare_argc();
@@ -198,13 +184,10 @@ returntype main_entry(signature())
    args_type() args = (args_type())args_initial_ptr();
    unsigned i;
 
-   if (frontend_init_enable)
-   {
-      frontend_ctx = (frontend_ctx_driver_t*)frontend_ctx_init_first();
+   frontend_ctx = (frontend_ctx_driver_t*)frontend_ctx_init_first();
 
-      if (frontend_ctx && frontend_ctx->init)
-         frontend_ctx->init(args);
-   }
+   if (frontend_ctx && frontend_ctx->init)
+      frontend_ctx->init(args);
 
    if (!ra_preinited)
    {
@@ -224,14 +207,12 @@ returntype main_entry(signature())
       if ((init_ret = rarch_main_init(argc, argv))) return_var(init_ret);
    }
 
-   if (menu_init_enable)
-      menu_init();
+   menu_init();
 
    if (frontend_ctx && frontend_ctx->process_args)
       frontend_ctx->process_args(argc, argv, args);
 
-   if (!initial_lifecycle_state_preinit)
-      g_extern.lifecycle_state |= initial_menu_lifecycle_state;
+   g_extern.lifecycle_state |= initial_menu_lifecycle_state;
 
 
 // YOUPI

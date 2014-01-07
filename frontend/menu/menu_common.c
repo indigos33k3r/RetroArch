@@ -36,8 +36,6 @@
 
 static uint16_t menu_framebuf[1440 * 900];
 
-bool menu_ready;
-
 #define TERM_START_X 15
 #define TERM_START_Y 27
 #define TERM_WIDTH (((rgui->width - TERM_START_X - 15) / (FONT_WIDTH_STRIDE)))
@@ -303,38 +301,17 @@ static void rgui_render(void *data)
 
 unsigned menu_type_is(unsigned type)
 {
-   unsigned ret = 0;
-   bool type_found;
 
-   type_found = 
-      type == RGUI_SETTINGS ||
-      type == RGUI_SETTINGS_CORE_OPTIONS ||
-      type == RGUI_SETTINGS_DISK_OPTIONS ||
-      type == RGUI_SETTINGS_PATH_OPTIONS;
-
-   if (type_found)
+   if (type == RGUI_SETTINGS)
    {
-      ret = RGUI_SETTINGS;
-      return ret;
+      return RGUI_SETTINGS;
+   }
+   else if (type == RGUI_SYSTEM_DIR_PATH)
+   {
+      return RGUI_FILE_DIRECTORY;
    }
 
-   type_found = type == RGUI_BROWSER_DIR_PATH ||
-      type == RGUI_SAVESTATE_DIR_PATH ||
-      type == RGUI_LIBRETRO_DIR_PATH ||
-      type == RGUI_LIBRETRO_INFO_DIR_PATH ||
-      type == RGUI_CONFIG_DIR_PATH ||
-      type == RGUI_SAVEFILE_DIR_PATH ||
-      type == RGUI_OVERLAY_DIR_PATH ||
-      type == RGUI_SCREENSHOT_DIR_PATH ||
-      type == RGUI_SYSTEM_DIR_PATH;
-
-   if (type_found)
-   {
-      ret = RGUI_FILE_DIRECTORY;
-      return ret;
-   }
-
-   return ret;
+   return 0;
 }
 
 void load_menu_game_prepare(void)
@@ -361,8 +338,7 @@ void load_menu_game_prepare(void)
    rgui->do_held = false;
    rgui->msg_force = true;
 
-   if (menu_ready)
-      menu_iterate_func(rgui, RGUI_ACTION_NOOP);
+   menu_iterate_func(rgui, RGUI_ACTION_NOOP);
 
    // Draw frame for loading message
    if (driver.video_poke && driver.video_poke->set_texture_enable)
@@ -442,7 +418,6 @@ bool load_menu_game(void)
 void menu_init(void)
 {
    rgui = rgui_init();
-   menu_ready = true;
 
    strlcpy(rgui->base_path, g_settings.rgui_browser_directory, sizeof(rgui->base_path));
    rgui->menu_stack = (file_list_t*)calloc(1, sizeof(file_list_t));
@@ -466,8 +441,7 @@ void menu_init(void)
 
 void menu_free(void)
 {
-   if (menu_ready)
-      rgui_free(rgui);
+   rgui_free(rgui);
 
 #ifdef HAVE_DYNAMIC
    libretro_free_system_info(&rgui->info);
@@ -520,7 +494,6 @@ void menu_ticker_line(char *buf, size_t len, unsigned index, const char *str, bo
    }
 }
 
-#ifdef HAVE_MENU
 static uint64_t menu_input(void)
 {
    unsigned i;
@@ -554,38 +527,6 @@ static uint64_t menu_input(void)
    return input_state;
 }
 
-// This only makes sense for PC so far.
-// Consoles use set_keybind callbacks instead.
-static int menu_custom_bind_iterate(void *data, unsigned action)
-{
-   rgui_handle_t *rgui = (rgui_handle_t*)data;
-   (void)action; // Have to ignore action here. Only bind that should work here is Quit RetroArch or something like that.
-
-   if (menu_ready)
-      rgui_render(rgui);
-
-   char msg[256];
-   snprintf(msg, sizeof(msg), "[%s]\npress joypad\n(RETURN to skip)", input_config_bind_map[rgui->binds.begin - RGUI_SETTINGS_BIND_BEGIN].desc);
-
-   struct rgui_bind_state binds = rgui->binds;
-   menu_poll_bind_state(&binds);
-
-   if ((binds.skip && !rgui->binds.skip) || menu_poll_find_trigger(&rgui->binds, &binds))
-   {
-      binds.begin++;
-      if (binds.begin <= binds.last)
-         binds.target++;
-      else
-         file_list_pop(rgui->menu_stack, &rgui->selection_ptr);
-
-      // Avoid new binds triggering things right away.
-      rgui->trigger_state = 0;
-      rgui->old_input_state = -1ULL;
-   }
-   rgui->binds = binds;
-   return 0;
-}
-
 static int menu_settings_iterate(void *data, unsigned action)
 {
    rgui_handle_t *rgui = (rgui_handle_t*)data;
@@ -605,8 +546,6 @@ static int menu_settings_iterate(void *data, unsigned action)
       label = ""; // Shouldn't happen ...
 #endif
    }
-   else if (type == RGUI_SETTINGS_DISK_APPEND)
-      label = rgui->base_path;
 
    const char *dir = NULL;
    unsigned menu_type = 0;
@@ -631,19 +570,16 @@ static int menu_settings_iterate(void *data, unsigned action)
             rgui->selection_ptr = 0;
          break;
 
-      case RGUI_ACTION_CANCEL:
-         if (rgui->menu_stack->size > 1)
-         {
-            file_list_pop(rgui->menu_stack, &rgui->selection_ptr);
-            rgui->need_refresh = true;
-         }
-         break;
-
-      case RGUI_ACTION_LEFT:
-      case RGUI_ACTION_RIGHT:
       case RGUI_ACTION_OK:
-      case RGUI_ACTION_START:
-         if ((type == RGUI_SETTINGS_OPEN_FILEBROWSER || type == RGUI_SETTINGS_OPEN_FILEBROWSER_DEFERRED_CORE)
+         if (type == RGUI_LAKKA_LAUNCH)
+         {
+            strlcpy(g_extern.fullpath, "/home/kivutar/Jeux/roms/sonic3.smd", sizeof(g_extern.fullpath));
+            strlcpy(g_settings.libretro, "/usr/lib/libretro/libretro-genplus.so", sizeof(g_settings.libretro));
+            g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
+            rgui->need_refresh = true;
+            rgui->msg_force = true;
+         }
+         else if ((type == RGUI_SETTINGS_OPEN_FILEBROWSER || type == RGUI_SETTINGS_OPEN_FILEBROWSER_DEFERRED_CORE)
                && action == RGUI_ACTION_OK)
          {
             rgui->defer_core = type == RGUI_SETTINGS_OPEN_FILEBROWSER_DEFERRED_CORE;
@@ -651,7 +587,7 @@ static int menu_settings_iterate(void *data, unsigned action)
             rgui->selection_ptr = 0;
             rgui->need_refresh = true;
          }
-         else if ((menu_type_is(type) == RGUI_SETTINGS || type == RGUI_SETTINGS_CORE || type == RGUI_SETTINGS_DISK_APPEND) && action == RGUI_ACTION_OK)
+         else if ((menu_type_is(type) == RGUI_SETTINGS) && action == RGUI_ACTION_OK)
          {
             file_list_push(rgui->menu_stack, label, type, rgui->selection_ptr);
             rgui->selection_ptr = 0;
@@ -680,16 +616,10 @@ static int menu_settings_iterate(void *data, unsigned action)
             menu_type == RGUI_SETTINGS_DISK_APPEND))
    {
       rgui->need_refresh = false;
-      if (
-            menu_type == RGUI_SETTINGS_DISK_OPTIONS
-            )
-         menu_populate_entries(rgui, menu_type);
-      else
-         menu_populate_entries(rgui, RGUI_SETTINGS);
+      menu_populate_entries(rgui, RGUI_SETTINGS);
    }
 
-   if (menu_ready)
-      rgui_render(rgui);
+   rgui_render(rgui);
 
    return 0;
 }
@@ -736,20 +666,6 @@ static void menu_flush_stack_type(void *data, unsigned final_type)
    }
 }
 
-void load_menu_game_new_core(void)
-{
-#ifdef HAVE_DYNAMIC
-   libretro_free_system_info(&rgui->info);
-   libretro_get_system_info(g_settings.libretro, &rgui->info,
-         &rgui->load_no_rom);
-
-   g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
-#else
-   rarch_environment_cb(RETRO_ENVIRONMENT_SET_LIBRETRO_PATH, (void*)g_settings.libretro);
-   rarch_environment_cb(RETRO_ENVIRONMENT_EXEC, (void*)g_extern.fullpath);
-#endif
-}
-
 static int menu_iterate_func(void *data, unsigned action)
 {
    rgui_handle_t *rgui = (rgui_handle_t*)data;
@@ -759,13 +675,10 @@ static int menu_iterate_func(void *data, unsigned action)
    file_list_get_last(rgui->menu_stack, &dir, &menu_type);
    int ret = 0;
 
-   if (menu_ready)
-      rgui_set_texture(rgui, false);
+   rgui_set_texture(rgui, false);
 
    if (menu_type_is(menu_type) == RGUI_SETTINGS)
       return menu_settings_iterate(rgui, action);
-   else if (menu_type == RGUI_SETTINGS_CUSTOM_BIND)
-      return menu_custom_bind_iterate(rgui, action);
 
    if (rgui->need_refresh && action != RGUI_ACTION_MESSAGE)
       action = RGUI_ACTION_NOOP;
@@ -827,11 +740,7 @@ static int menu_iterate_func(void *data, unsigned action)
          unsigned type = 0;
          file_list_get_at_offset(rgui->selection_buf, rgui->selection_ptr, &path, &type);
 
-         if (
-               menu_type_is(type) == RGUI_FILE_DIRECTORY ||
-               type == RGUI_SETTINGS_CORE ||
-               type == RGUI_SETTINGS_DISK_APPEND ||
-               type == RGUI_FILE_DIRECTORY)
+         if (type == RGUI_FILE_DIRECTORY)
          {
             char cat_path[PATH_MAX];
             fill_pathname_join(cat_path, dir, path, sizeof(cat_path));
@@ -842,139 +751,44 @@ static int menu_iterate_func(void *data, unsigned action)
          }
          else
          {
-            if (menu_type == RGUI_SETTINGS_DEFERRED_CORE)
+            if (rgui->defer_core)
             {
-               // FIXME: Add for consoles.
-               strlcpy(g_settings.libretro, path, sizeof(g_settings.libretro));
-               strlcpy(g_extern.fullpath, rgui->deferred_path, sizeof(g_extern.fullpath));
+               fill_pathname_join(rgui->deferred_path, dir, path, sizeof(rgui->deferred_path));
 
-               load_menu_game_new_core(); // HERE
-               rgui->msg_force = true;
-               ret = -1;
-               menu_flush_stack_type(rgui, RGUI_SETTINGS);
-            }
-            else if (menu_type == RGUI_SETTINGS_CORE)
-            {
-               fill_pathname_join(g_settings.libretro, dir, path, sizeof(g_settings.libretro));
-               libretro_free_system_info(&rgui->info);
-               libretro_get_system_info(g_settings.libretro, &rgui->info,
-                     &rgui->load_no_rom);
+               const core_info_t *info = NULL;
+               size_t supported = 0;
+               if (rgui->core_info)
+                  core_info_list_get_supported_cores(rgui->core_info, rgui->deferred_path, &info, &supported);
 
-               // No ROM needed for this core, load game immediately.
-               if (rgui->load_no_rom)
+               if (supported == 1) // Can make a decision right now.
                {
-                  g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
-                  *g_extern.fullpath = '\0';
-                  rgui->msg_force = true;
-                  ret = -1;
-               }
+                  strlcpy(g_extern.fullpath, "/home/kivutar/Jeux/roms/sonic3.smd", sizeof(g_extern.fullpath));
+                  strlcpy(g_settings.libretro, "/usr/lib/libretro/libretro-genplus.so", sizeof(g_settings.libretro));
 
-               menu_flush_stack_type(rgui, RGUI_SETTINGS);
-            }
-            else if (menu_type == RGUI_SETTINGS_DISK_APPEND)
-            {
-               char image[PATH_MAX];
-               fill_pathname_join(image, dir, path, sizeof(image));
-               rarch_disk_control_append_image(image);
-
-               g_extern.lifecycle_state |= 1ULL << MODE_GAME;
-
-               menu_flush_stack_type(rgui, RGUI_SETTINGS);
-               ret = -1;
-            }
-            else if (menu_type == RGUI_BROWSER_DIR_PATH)
-            {
-               strlcpy(g_settings.rgui_browser_directory, dir, sizeof(g_settings.rgui_browser_directory));
-               strlcpy(rgui->base_path, dir, sizeof(rgui->base_path));
-               menu_flush_stack_type(rgui, RGUI_SETTINGS_PATH_OPTIONS);
-            }
-#ifdef HAVE_SCREENSHOTS
-            else if (menu_type == RGUI_SCREENSHOT_DIR_PATH)
-            {
-               strlcpy(g_settings.screenshot_directory, dir, sizeof(g_settings.screenshot_directory));
-               menu_flush_stack_type(rgui, RGUI_SETTINGS_PATH_OPTIONS);
-            }
-#endif
-            else if (menu_type == RGUI_SAVEFILE_DIR_PATH)
-            {
-               strlcpy(g_extern.savefile_dir, dir, sizeof(g_extern.savefile_dir));
-               menu_flush_stack_type(rgui, RGUI_SETTINGS_PATH_OPTIONS);
-            }
-            else if (menu_type == RGUI_SAVESTATE_DIR_PATH)
-            {
-               strlcpy(g_extern.savestate_dir, dir, sizeof(g_extern.savestate_dir));
-               menu_flush_stack_type(rgui, RGUI_SETTINGS_PATH_OPTIONS);
-            }
-            else if (menu_type == RGUI_LIBRETRO_DIR_PATH)
-            {
-               strlcpy(rgui->libretro_dir, dir, sizeof(rgui->libretro_dir));
-               menu_init_core_info(rgui);
-               menu_flush_stack_type(rgui, RGUI_SETTINGS_PATH_OPTIONS);
-            }
-            else if (menu_type == RGUI_CONFIG_DIR_PATH)
-            {
-               strlcpy(g_settings.rgui_config_directory, dir, sizeof(g_settings.rgui_config_directory));
-               menu_flush_stack_type(rgui, RGUI_SETTINGS_PATH_OPTIONS);
-            }
-            else if (menu_type == RGUI_LIBRETRO_INFO_DIR_PATH)
-            {
-               strlcpy(g_settings.libretro_info_path, dir, sizeof(g_settings.libretro_info_path));
-               menu_init_core_info(rgui);
-               menu_flush_stack_type(rgui, RGUI_SETTINGS_PATH_OPTIONS);
-            }
-            else if (menu_type == RGUI_SYSTEM_DIR_PATH)
-            {
-               strlcpy(g_settings.system_directory, dir, sizeof(g_settings.system_directory));
-               menu_flush_stack_type(rgui, RGUI_SETTINGS_PATH_OPTIONS);
-            }
-            else
-            {
-               if (rgui->defer_core)
-               {
-                  fill_pathname_join(rgui->deferred_path, dir, path, sizeof(rgui->deferred_path));
-
-                  const core_info_t *info = NULL;
-                  size_t supported = 0;
-                  if (rgui->core_info)
-                     core_info_list_get_supported_cores(rgui->core_info, rgui->deferred_path, &info, &supported);
-
-                  if (supported == 1) // Can make a decision right now.
-                  {
-                     printf(g_extern.fullpath);
-                     printf("---");
-                     printf(g_settings.libretro);
-                     printf("---");
-                     printf(rgui->deferred_path);
-
-
-                     strlcpy(g_extern.fullpath, "/home/kivutar/Jeux/roms/sonic3.smd", sizeof(g_extern.fullpath));
-                     strlcpy(g_settings.libretro, "/usr/lib/libretro/libretro-genplus.so", sizeof(g_settings.libretro));
-
-                     //libretro_free_system_info(&rgui->info);
-                     /*libretro_get_system_info(g_settings.libretro, &rgui->info,
-                           &rgui->load_no_rom);*/
-                     g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
-
-                     menu_flush_stack_type(rgui, RGUI_SETTINGS);
-                     rgui->msg_force = true;
-                     ret = -1;
-                  }
-                  else // Present a selection.
-                  {
-                     file_list_push(rgui->menu_stack, rgui->libretro_dir, RGUI_SETTINGS_DEFERRED_CORE, rgui->selection_ptr);
-                     rgui->selection_ptr = 0;
-                     rgui->need_refresh = true;
-                  }
-               }
-               else
-               {
-                  fill_pathname_join(g_extern.fullpath, dir, path, sizeof(g_extern.fullpath));
+                  //libretro_free_system_info(&rgui->info);
+                  /*libretro_get_system_info(g_settings.libretro, &rgui->info,
+                        &rgui->load_no_rom);*/
                   g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
 
                   menu_flush_stack_type(rgui, RGUI_SETTINGS);
                   rgui->msg_force = true;
                   ret = -1;
                }
+               else // Present a selection.
+               {
+                  file_list_push(rgui->menu_stack, rgui->libretro_dir, RGUI_SETTINGS_DEFERRED_CORE, rgui->selection_ptr);
+                  rgui->selection_ptr = 0;
+                  rgui->need_refresh = true;
+               }
+            }
+            else
+            {
+               fill_pathname_join(g_extern.fullpath, dir, path, sizeof(g_extern.fullpath));
+               g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
+
+               menu_flush_stack_type(rgui, RGUI_SETTINGS);
+               rgui->msg_force = true;
+               ret = -1;
             }
          }
          break;
@@ -1007,8 +821,7 @@ static int menu_iterate_func(void *data, unsigned action)
       menu_parse_and_resolve(rgui, menu_type);
    }
 
-   if (menu_ready)
-      rgui_render(rgui);
+   rgui_render(rgui);
 
    return ret;
 }
@@ -1094,8 +907,7 @@ bool menu_iterate(void)
    else if (rgui->trigger_state & (1ULL << RETRO_DEVICE_ID_JOYPAD_START))
       action = RGUI_ACTION_START;
 
-   if (menu_ready)
-      input_entry_ret = menu_iterate_func(rgui, action);
+   input_entry_ret = menu_iterate_func(rgui, action);
 
    if (driver.video_poke && driver.video_poke->set_texture_enable)
       driver.video_poke->set_texture_enable(driver.video_data, rgui->frame_buf_show, MENU_TEXTURE_FULLSCREEN);
@@ -1136,7 +948,6 @@ bool menu_iterate(void)
 deinit:
    return false;
 }
-#endif
 
 void menu_poll_bind_state(struct rgui_bind_state *state)
 {
@@ -1189,96 +1000,6 @@ void menu_poll_bind_get_rested_axes(struct rgui_bind_state *state)
          state->axis_state[i].rested_axes[a] = input_joypad_axis_raw(joypad, i, a);
 }
 
-static bool menu_poll_find_trigger_pad(struct rgui_bind_state *state, struct rgui_bind_state *new_state, unsigned p)
-{
-   unsigned a, b, h;
-   const struct rgui_bind_state_port *n = &new_state->state[p];
-   const struct rgui_bind_state_port *o = &state->state[p];
-
-   for (b = 0; b < RGUI_MAX_BUTTONS; b++)
-   {
-      if (n->buttons[b] && !o->buttons[b])
-      {
-         state->target->joykey = b;
-         state->target->joyaxis = AXIS_NONE;
-         return true;
-      }
-   }
-
-   // Axes are a bit tricky ...
-   for (a = 0; a < RGUI_MAX_AXES; a++)
-   {
-      int locked_distance = abs(n->axes[a] - new_state->axis_state[p].locked_axes[a]);
-      int rested_distance = abs(n->axes[a] - new_state->axis_state[p].rested_axes[a]);
-
-      if (abs(n->axes[a]) >= 20000 &&
-            locked_distance >= 20000 &&
-            rested_distance >= 20000) // Take care of case where axis rests on +/- 0x7fff (e.g. 360 controller on Linux)
-      {
-         state->target->joyaxis = n->axes[a] > 0 ? AXIS_POS(a) : AXIS_NEG(a);
-         state->target->joykey = NO_BTN;
-
-         // Lock the current axis.
-         new_state->axis_state[p].locked_axes[a] = n->axes[a] > 0 ? 0x7fff : -0x7fff; 
-         return true;
-      }
-
-      if (locked_distance >= 20000) // Unlock the axis.
-         new_state->axis_state[p].locked_axes[a] = 0;
-   }
-
-   for (h = 0; h < RGUI_MAX_HATS; h++)
-   {
-      uint16_t trigged = n->hats[h] & (~o->hats[h]);
-      uint16_t sane_trigger = 0;
-      if (trigged & HAT_UP_MASK)
-         sane_trigger = HAT_UP_MASK;
-      else if (trigged & HAT_DOWN_MASK)
-         sane_trigger = HAT_DOWN_MASK;
-      else if (trigged & HAT_LEFT_MASK)
-         sane_trigger = HAT_LEFT_MASK;
-      else if (trigged & HAT_RIGHT_MASK)
-         sane_trigger = HAT_RIGHT_MASK;
-
-      if (sane_trigger)
-      {
-         state->target->joykey = HAT_MAP(h, sane_trigger);
-         state->target->joyaxis = AXIS_NONE;
-         return true;
-      }
-   }
-
-   return false;
-}
-
-bool menu_poll_find_trigger(struct rgui_bind_state *state, struct rgui_bind_state *new_state)
-{
-   unsigned i;
-   for (i = 0; i < MAX_PLAYERS; i++)
-   {
-      if (menu_poll_find_trigger_pad(state, new_state, i))
-      {
-         g_settings.input.joypad_map[state->player] = i; // Update the joypad mapping automatically. More friendly that way.
-         return true;
-      }
-   }
-   return false;
-}
-
-static inline int menu_list_get_first_char(file_list_t *buf, unsigned offset)
-{
-   const char *path = NULL;
-   file_list_get_alt_at_offset(buf, offset, &path);
-   int ret = tolower(*path);
-  
-   // "Normalize" non-alphabetical entries so they are lumped together for purposes of jumping.
-   if (ret < 'a')
-      ret = 'a' - 1;
-   else if (ret > 'z')
-      ret = 'z' + 1;
-   return ret;
-}
-
 static inline bool menu_list_elem_is_dir(file_list_t *buf, unsigned offset)
 {
    const char *path = NULL;
@@ -1290,56 +1011,18 @@ static inline bool menu_list_elem_is_dir(file_list_t *buf, unsigned offset)
 void menu_populate_entries(void *data, unsigned menu_type)
 {
    rgui_handle_t *rgui = (rgui_handle_t*)data;
-   unsigned i, last;
 
-   switch (menu_type)
+   file_list_clear(rgui->selection_buf);
+   file_list_push(rgui->selection_buf, "Load Content (Detect Core)", RGUI_SETTINGS_OPEN_FILEBROWSER_DEFERRED_CORE, 0);
+   file_list_push(rgui->selection_buf, "Lakka", RGUI_LAKKA_LAUNCH, 0);
+
+   if (g_extern.main_is_init && !g_extern.libretro_dummy)
    {
-      case RGUI_SETTINGS_DISK_OPTIONS:
-         file_list_clear(rgui->selection_buf);
-         file_list_push(rgui->selection_buf, "Disk Index", RGUI_SETTINGS_DISK_INDEX, 0);
-         file_list_push(rgui->selection_buf, "Disk Image Append", RGUI_SETTINGS_DISK_APPEND, 0);
-         break;
-      case RGUI_SETTINGS_PATH_OPTIONS:
-         file_list_clear(rgui->selection_buf);
-         file_list_push(rgui->selection_buf, "Browser Directory", RGUI_BROWSER_DIR_PATH, 0);
-         file_list_push(rgui->selection_buf, "Config Directory", RGUI_CONFIG_DIR_PATH, 0);
-         file_list_push(rgui->selection_buf, "Core Directory", RGUI_LIBRETRO_DIR_PATH, 0);
-         file_list_push(rgui->selection_buf, "Core Info Directory", RGUI_LIBRETRO_INFO_DIR_PATH, 0);
-         file_list_push(rgui->selection_buf, "Savestate Directory", RGUI_SAVESTATE_DIR_PATH, 0);
-         file_list_push(rgui->selection_buf, "Savefile Directory", RGUI_SAVEFILE_DIR_PATH, 0);
-         file_list_push(rgui->selection_buf, "System Directory", RGUI_SYSTEM_DIR_PATH, 0);
-         file_list_push(rgui->selection_buf, "Screenshot Directory", RGUI_SCREENSHOT_DIR_PATH, 0);
-         break;
-      case RGUI_SETTINGS:
-         file_list_clear(rgui->selection_buf);
-
-         file_list_push(rgui->selection_buf, "Core", RGUI_SETTINGS_CORE, 0);
-         if (rgui->core_info && core_info_list_num_info_files(rgui->core_info))
-            file_list_push(rgui->selection_buf, "Load Content (Detect Core)", RGUI_SETTINGS_OPEN_FILEBROWSER_DEFERRED_CORE, 0);
-
-         if (rgui->info.library_name || g_extern.system.info.library_name)
-         {
-            char load_game_core_msg[64];
-            snprintf(load_game_core_msg, sizeof(load_game_core_msg), "Load Content (%s)",
-                  rgui->info.library_name ? rgui->info.library_name : g_extern.system.info.library_name);
-            file_list_push(rgui->selection_buf, load_game_core_msg, RGUI_SETTINGS_OPEN_FILEBROWSER, 0);
-         }
-
-         file_list_push(rgui->selection_buf, "Lakka", RGUI_LAKKA_LAUNCH, 0);
-
-         if (g_extern.main_is_init && !g_extern.libretro_dummy)
-         {
-            file_list_push(rgui->selection_buf, "Save State", RGUI_SETTINGS_SAVESTATE_SAVE, 0);
-            file_list_push(rgui->selection_buf, "Load State", RGUI_SETTINGS_SAVESTATE_LOAD, 0);
-            file_list_push(rgui->selection_buf, "Take Screenshot", RGUI_SETTINGS_SCREENSHOT, 0);
-            file_list_push(rgui->selection_buf, "Resume Content", RGUI_SETTINGS_RESUME_GAME, 0);
-            file_list_push(rgui->selection_buf, "Restart Content", RGUI_SETTINGS_RESTART_GAME, 0);
-
-         }
-         file_list_push(rgui->selection_buf, "Restart RetroArch", RGUI_SETTINGS_RESTART_EMULATOR, 0);
-         file_list_push(rgui->selection_buf, "Save New Config", RGUI_SETTINGS_SAVE_CONFIG, 0);
-         file_list_push(rgui->selection_buf, "Quit RetroArch", RGUI_SETTINGS_QUIT_RARCH, 0);
-         break;
+      file_list_push(rgui->selection_buf, "Save State", RGUI_SETTINGS_SAVESTATE_SAVE, 0);
+      file_list_push(rgui->selection_buf, "Load State", RGUI_SETTINGS_SAVESTATE_LOAD, 0);
+      file_list_push(rgui->selection_buf, "Take Screenshot", RGUI_SETTINGS_SCREENSHOT, 0);
+      file_list_push(rgui->selection_buf, "Resume Content", RGUI_SETTINGS_RESUME_GAME, 0);
+      file_list_push(rgui->selection_buf, "Restart Content", RGUI_SETTINGS_RESTART_GAME, 0);
    }
 }
 
@@ -1425,46 +1108,6 @@ void menu_parse_and_resolve(void *data, unsigned menu_type)
 
             string_list_free(list);
          }
-   }
-
-   // resolving switch
-   switch (menu_type)
-   {
-      case RGUI_SETTINGS_CORE:
-         dir = NULL;
-         list = (file_list_t*)rgui->selection_buf;
-         file_list_get_last(rgui->menu_stack, &dir, &menu_type);
-         list_size = list->size;
-         for (i = 0; i < list_size; i++)
-         {
-            const char *path;
-            unsigned type = 0;
-            file_list_get_at_offset(list, i, &path, &type);
-            if (type != RGUI_FILE_PLAIN)
-               continue;
-
-            char core_path[PATH_MAX];
-            fill_pathname_join(core_path, dir, path, sizeof(core_path));
-
-            char display_name[256];
-            if (rgui->core_info &&
-                  core_info_list_get_display_name(rgui->core_info,
-                     core_path, display_name, sizeof(display_name)))
-               file_list_set_alt_at_offset(list, i, display_name);
-         }
-         file_list_sort_on_alt(rgui->selection_buf);
-         break;
-      case RGUI_SETTINGS_DEFERRED_CORE:
-         core_info_list_get_supported_cores(rgui->core_info, rgui->deferred_path, &info, &list_size);
-         for (i = 0; i < list_size; i++)
-         {
-            file_list_push(rgui->selection_buf, info[i].path, RGUI_FILE_PLAIN, 0);
-            file_list_set_alt_at_offset(rgui->selection_buf, i, info[i].display_name);
-         }
-         file_list_sort_on_alt(rgui->selection_buf);
-         break;
-      default:
-         (void)0;
    }
 
    rgui->scroll_indices_size = 0;
