@@ -40,11 +40,6 @@ int main(int argc, char *argv[])
 
    g_extern.lifecycle_state |= (1ULL << MODE_GAME);
 
-// YOUPI
-strlcpy(g_extern.fullpath, "/home/kivutar/Jeux/roms/sonic3.smd", sizeof(g_extern.fullpath));
-strlcpy(g_settings.libretro, "/usr/lib/libretro/libretro-genplus.so", sizeof(g_settings.libretro));
-g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
-
    do
    {
       if (g_extern.system.shutdown)
