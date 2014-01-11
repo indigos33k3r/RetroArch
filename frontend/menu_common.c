@@ -23,6 +23,7 @@
 #include <time.h>
 #include <SOIL/SOIL.h>
 #include "menu_common.h"
+#include "tween.h"
 
 #include "../gfx/gl_common.h"
 #include "../gfx/gfx_common.h"
@@ -36,18 +37,6 @@
 #define FBWIDTH 480
 #define FBHEIGHT 300
 #define HSPACING 127
-
-typedef float (*easingFunc)(float, float, float, float);
-
-typedef struct
-{
-   float  duration;
-   float  running_since;
-   float  initial_value;
-   float  target_value;
-   float* subject;
-   easingFunc easing;
-} tween;
 
 typedef struct
 {
@@ -63,7 +52,6 @@ menu_category categories[4];
 int menu_active_category = 0;
 
 float all_categories_x = 0;
-int dotween = 0;
 
 tween tw1;
 
@@ -73,7 +61,7 @@ rgui_handle_t *rgui;
 
 GLuint image;
 
-float timeSinceStart, deltaTime, oldTimeSinceStart;
+float timeSinceStart, oldTimeSinceStart;
 
 static double gx = 0.0;
 static double gx2 = 0.0;
@@ -174,19 +162,9 @@ int rgui_input_postprocess(void *data, uint64_t old_state)
    return ret;
 }
 
-//t,b,c,d = self.running, initial[k], v - initial[k], self.time
-float inOutQuad(float t, float b, float c, float d)
-{
-   t = t / d * 2;
-   if (t < 1)
-      return c / 2 * pow(t, 2) + b;
-   return -c / 2 * ((t - 1) * (t - 3) - 1) + b;
-}
-
 void switch_categories()
 {
-   dotween = 1;
-
+   tw1.alive = 1;
    tw1.duration = 0.025;
    tw1.initial_value = all_categories_x;
    tw1.target_value = -menu_active_category * HSPACING;
@@ -215,24 +193,27 @@ void draw_category(GLuint texture, float x, float y, float alpha)
    glColor4f(1, 1, 1, 1);
 }
 
-void lakka_draw(void *data)
+void update_tweens(float dt)
 {
-   timeSinceStart = (float)clock()/CLOCKS_PER_SEC;
-   deltaTime = timeSinceStart - oldTimeSinceStart;
-   oldTimeSinceStart = timeSinceStart;
-
-   printf("%f\n", 1.0/deltaTime);
-
-   if (dotween) {
-      tw1.running_since += deltaTime;
+   if (tw1.running_since < tw1.duration) {
+      tw1.running_since += dt;
       *(tw1.subject) = tw1.easing(
          tw1.running_since,
          tw1.initial_value,
          tw1.target_value - tw1.initial_value,
          tw1.duration);
-
-      dotween = (tw1.running_since < tw1.duration);
    }
+}
+
+void lakka_draw(void *data)
+{
+   timeSinceStart = (float)clock()/CLOCKS_PER_SEC;
+   float dt = timeSinceStart - oldTimeSinceStart;
+   oldTimeSinceStart = timeSinceStart;
+
+   printf("%f\n", 1.0/dt);
+
+   update_tweens(dt);
 
    for(int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
    {

@@ -91,7 +91,7 @@ endif
 
 ifeq ($(HAVE_RGUI), 1)
    LIBS += -lSOIL
-   OBJ += frontend/menu_common.o file_list.o
+   OBJ += frontend/menu_common.o frontend/tween.o file_list.o
 	DEFINES += -DHAVE_MENU
 endif
 
