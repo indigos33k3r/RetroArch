@@ -37,11 +37,23 @@
 #define FBHEIGHT 300
 #define HSPACING 127
 
+typedef float (*easingFunc)(float, float, float, float);
+
+typedef struct
+{
+   float  duration;
+   float  running_since;
+   float  initial_value;
+   float  target_value;
+   float* subject;
+   easingFunc easing;
+} tween;
+
 typedef struct
 {
    char*  name;
    GLuint icon;
-   int    alpha;
+   float  alpha;
    int    zoom;
    int    active_item;
 } menu_category;
@@ -52,9 +64,8 @@ int menu_active_category = 0;
 
 float all_categories_x = 0;
 int dotween = 0;
-float running = 0;
-float initial = 0;
-float target = 0;
+
+tween tw1;
 
 static uint16_t menu_framebuf[FBWIDTH * FBHEIGHT];
 
@@ -77,7 +88,6 @@ static rgui_handle_t *rgui_init(void)
    clock_t t = clock();
    timeSinceStart = ((float)t)/CLOCKS_PER_SEC;
    oldTimeSinceStart = 0;
-   printf("%f\n", timeSinceStart);
 
    menu_category cat0;
    cat0.name = "Settings";
@@ -88,7 +98,7 @@ static rgui_handle_t *rgui_init(void)
          SOIL_CREATE_NEW_ID,
          SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
       );
-   cat0.alpha = 255;
+   cat0.alpha = 1.0;
    cat0.active_item = 0;
    categories[0] = cat0;
 
@@ -101,7 +111,7 @@ static rgui_handle_t *rgui_init(void)
          SOIL_CREATE_NEW_ID,
          SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
       );
-   cat1.alpha = 128;
+   cat1.alpha = 0.5;
    cat1.active_item = 0;
    categories[1] = cat1;
 
@@ -114,7 +124,7 @@ static rgui_handle_t *rgui_init(void)
          SOIL_CREATE_NEW_ID,
          SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
       );
-   cat2.alpha = 128;
+   cat2.alpha = 0.5;
    cat2.active_item = 0;
    categories[2] = cat2;
 
@@ -127,7 +137,7 @@ static rgui_handle_t *rgui_init(void)
          SOIL_CREATE_NEW_ID,
          SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
       );
-   cat3.alpha = 128;
+   cat3.alpha = 0.5;
    cat3.active_item = 0;
    categories[3] = cat3;
 
@@ -173,34 +183,36 @@ float inOutQuad(float t, float b, float c, float d)
    return -c / 2 * ((t - 1) * (t - 3) - 1) + b;
 }
 
-/*void easeWithTween(  float (*fp)(float, float, float, float))
-{
-   all_categories_x = 
-}*/
-
 void switch_categories()
 {
    dotween = 1;
-   running = 0;
-   initial = all_categories_x;
-   target = -menu_active_category * HSPACING;
+
+   tw1.duration = 0.025;
+   tw1.initial_value = all_categories_x;
+   tw1.target_value = -menu_active_category * HSPACING;
+   tw1.running_since = 0;
+   tw1.subject = &all_categories_x;
+   tw1.easing = &inOutQuad;
 }
 
-void draw_category(GLuint texture, float x, float y)
+void draw_category(GLuint texture, float x, float y, float alpha)
 {
+   printf("%f\n", alpha);
    glEnable(GL_BLEND);
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
    glLoadIdentity();
+   glColor4f(1, 1, 1, alpha);
    glBindTexture(GL_TEXTURE_2D, texture);
    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
    glTranslated(x/FBWIDTH, (FBHEIGHT-y)/FBHEIGHT, 0);
    glBegin(GL_QUADS);
-   glTexCoord2d(0,0);    glVertex2d(  0.0/FBWIDTH,   0.0/FBHEIGHT);
-   glTexCoord2d(0,1);    glVertex2d(  0.0/FBWIDTH, 64.0/FBHEIGHT);
-   glTexCoord2d(1,1);    glVertex2d(64.0/FBWIDTH, 64.0/FBHEIGHT);
-   glTexCoord2d(1,0);    glVertex2d(64.0/FBWIDTH,   0.0/FBHEIGHT);
+      glTexCoord2d(0,0);    glVertex2d(  0.0/FBWIDTH,   0.0/FBHEIGHT);
+      glTexCoord2d(0,1);    glVertex2d(  0.0/FBWIDTH, 64.0/FBHEIGHT);
+      glTexCoord2d(1,1);    glVertex2d(64.0/FBWIDTH, 64.0/FBHEIGHT);
+      glTexCoord2d(1,0);    glVertex2d(64.0/FBWIDTH,   0.0/FBHEIGHT);
    glEnd();
+   glColor4f(1, 1, 1, 1);
 }
 
 void lakka_draw(void *data)
@@ -209,16 +221,22 @@ void lakka_draw(void *data)
    deltaTime = timeSinceStart - oldTimeSinceStart;
    oldTimeSinceStart = timeSinceStart;
 
+   printf("%f\n", 1.0/deltaTime);
+
    if (dotween) {
-      running = running + deltaTime;
-      //easeWithTween( , &inOutQuad)
-      all_categories_x = inOutQuad(running, initial, target - initial, 0.025);
-      dotween = (running < 0.025);
+      tw1.running_since += deltaTime;
+      *(tw1.subject) = tw1.easing(
+         tw1.running_since,
+         tw1.initial_value,
+         tw1.target_value - tw1.initial_value,
+         tw1.duration);
+
+      dotween = (tw1.running_since < tw1.duration);
    }
 
    for(int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
    {
-      draw_category(categories[i].icon, all_categories_x + 16 + HSPACING*(i+1), 100+32);
+      draw_category(categories[i].icon, all_categories_x + 16 + HSPACING*(i+1), 100+32, categories[i].alpha);
    }
 }
 
