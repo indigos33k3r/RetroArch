@@ -48,7 +48,7 @@ typedef struct
 
 menu_category categories[4];
 
-int menu_active_category;
+int menu_active_category = 0;
 
 float all_categories_x = 0;
 int dotween = 0;
@@ -78,8 +78,6 @@ static rgui_handle_t *rgui_init(void)
    timeSinceStart = ((float)t)/CLOCKS_PER_SEC;
    oldTimeSinceStart = 0;
    printf("%f\n", timeSinceStart);
-
-   menu_active_category = 0;
 
    menu_category cat0;
    cat0.name = "Settings";
