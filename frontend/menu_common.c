@@ -20,8 +20,11 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
+#include <time.h>
+#include <SOIL/SOIL.h>
 #include "menu_common.h"
 
+#include "../gfx/gl_common.h"
 #include "../gfx/gfx_common.h"
 #include "../performance.h"
 #include "../driver.h"
@@ -30,26 +33,69 @@
 
 #include "../compat/posix_string.h"
 
-static uint16_t menu_framebuf[1440 * 900];
+#define FBWIDTH 480
+#define FBHEIGHT 300
+
+static uint16_t menu_framebuf[FBWIDTH * FBHEIGHT];
 
 rgui_handle_t *rgui;
 
 int num_items;
 int active_item;
 
+/*SDL_Surface *screen;
+SDL_Surface *image;
+
+SDL_Rect position;*/
+
+GLuint image;
+
+float timeSinceStart, deltaTime, oldTimeSinceStart;
+
+static double gx = 0.0;
+static double gx2 = 0.0;
+
+double v = 1.0;
+
 //forward decl
 static int menu_iterate_func(void *data, unsigned action);
 
 static rgui_handle_t *rgui_init(void)
 {
+   clock_t t = clock();
+   timeSinceStart = ((float)t)/CLOCKS_PER_SEC;
+   oldTimeSinceStart = 0;
+   printf("%f\n", timeSinceStart);
+
+   /*if (SDL_Init(SDL_INIT_VIDEO) == -1) // Démarrage de la SDL. Si erreur :
+   {
+      fprintf(stderr, "Erreur d'initialisation de la SDL : %s\n", SDL_GetError()); // Écriture de l'erreur
+      exit(EXIT_FAILURE); // On quitte le programme
+   }
+
+   screen = SDL_CreateRGBSurface(SDL_HWSURFACE, FBWIDTH, FBHEIGHT, 32, 0, 0, 0, 0);
+
+   image = SDL_LoadBMP("nes.bmp");
+
+   position.x = 0;
+   position.y = 0;*/
+
+   image = SOIL_load_OGL_texture
+   (
+      "media/lakka/nes.png",
+      SOIL_LOAD_AUTO,
+      SOIL_CREATE_NEW_ID,
+      SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
+   );
+
    uint16_t *framebuf = menu_framebuf;
    size_t framebuf_pitch;
 
    rgui_handle_t *rgui = (rgui_handle_t*)calloc(1, sizeof(*rgui));
 
    rgui->frame_buf = framebuf;
-   rgui->width = 1440;
-   rgui->height = 900;
+   rgui->width = FBWIDTH;
+   rgui->height = FBHEIGHT;
    framebuf_pitch = rgui->width * sizeof(uint16_t);
 
    rgui->frame_buf_pitch = framebuf_pitch;
@@ -57,6 +103,7 @@ static rgui_handle_t *rgui_init(void)
    return rgui;
 }
 
+// With this, F1 switch back to the game
 int rgui_input_postprocess(void *data, uint64_t old_state)
 {
    (void)data;
@@ -74,54 +121,56 @@ int rgui_input_postprocess(void *data, uint64_t old_state)
    return ret;
 }
 
-void rgui_set_texture(void *data, bool enable)
-{
-   rgui_handle_t *rgui = (rgui_handle_t*)data;
-
-   if (driver.video_poke && driver.video_poke->set_texture_enable)
-      driver.video_poke->set_texture_frame(driver.video_data, menu_framebuf,
-            enable, rgui->width, rgui->height, 1.0f);
-}
-
 static void rgui_free(void *data)
 {
+   //SDL_Quit();
+
    rgui_handle_t *rgui = (rgui_handle_t*)data;
 }
 
-static uint16_t black_filler(unsigned x, unsigned y)
-{
-   x >>= 1;
-   y >>= 1;
-   unsigned col = 0;
-
-   return (col << 13) | (col << 9) | (col << 5) | (12 << 0);
-}
-
-static uint16_t green_filler(unsigned x, unsigned y)
-{
-   x >>= 1;
-   y >>= 1;
-   unsigned col = 1;
-   return (col << 13) | (col << 9) | (col << 5) | (12 << 0);
-}
-
-static uint16_t hightlight_filler(unsigned x, unsigned y)
-{
-   x >>= 1;
-   y >>= 1;
-   unsigned col = 1;
-   return (col << 10) | (col << 9) | (col << 5) | (12 << 0);
-}
-
-static void fill_rect(uint16_t *buf, unsigned pitch,
+/*static void fill_rect(uint16_t *buf, unsigned pitch,
       unsigned x, unsigned y,
-      unsigned width, unsigned height,
-      uint16_t (*col)(unsigned x, unsigned y))
+      unsigned width, unsigned height, uint16_t color)
 {
    unsigned j, i;
    for (j = y; j < y + height; j++)
       for (i = x; i < x + width; i++)
-         buf[j * (pitch >> 1) + i] = col(i, j);
+         buf[j * (pitch >> 1) + i] = color;
+}*/
+
+void lakka_draw(void *data)
+{
+
+   timeSinceStart = (float)clock()/CLOCKS_PER_SEC;
+   deltaTime = timeSinceStart - oldTimeSinceStart;
+   oldTimeSinceStart = timeSinceStart;
+
+   printf("%f\n", 1.0/deltaTime);
+
+   if (gx > 190.0/FBWIDTH)
+   {
+      gx = 190.0/FBWIDTH;
+      v = -v;
+   }
+
+   if (gx < 0)
+   {
+      gx = 0;
+      v = -v;
+   }
+
+   gx = gx + v*deltaTime;
+
+   glBindTexture(GL_TEXTURE_2D, image);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   glTranslated(gx, 0, 0);
+   glBegin(GL_QUADS);
+   glTexCoord2d(0,0);    glVertex2d(  0.0/FBWIDTH,   0.0/FBHEIGHT);
+   glTexCoord2d(0,1);    glVertex2d(  0.0/FBWIDTH, 64.0/FBHEIGHT);
+   glTexCoord2d(1,1);    glVertex2d(64.0/FBWIDTH, 64.0/FBHEIGHT);
+   glTexCoord2d(1,0);    glVertex2d(64.0/FBWIDTH,   0.0/FBHEIGHT);
+   glEnd();
 }
 
 static void rgui_render(void *data)
@@ -133,20 +182,19 @@ static void rgui_render(void *data)
          && !rgui->msg_force)
       return;
 
-   fill_rect(rgui->frame_buf, rgui->frame_buf_pitch,
-      0, 0, rgui->width, rgui->height, black_filler);
-
+   //fill_rect(rgui->frame_buf, rgui->frame_buf_pitch, 0, 0, rgui->width, rgui->height, 0xfff8);
+   /*
    for (int i = 0; i < 3; i++)
    {
       if (i == active_item)
       {
          fill_rect(rgui->frame_buf, rgui->frame_buf_pitch,
-            100 + (200*i), 100, 100, 100, hightlight_filler);
+            100 + (200*i), 100, 100, 100, 0xf00f);
       }
       else
       {
          fill_rect(rgui->frame_buf, rgui->frame_buf_pitch,
-            100 + (200*i), 100, 100, 100, green_filler);
+            100 + (200*i), 100, 100, 100, 0x0f0f);
       }
    }
 
@@ -154,27 +202,53 @@ static void rgui_render(void *data)
    if (g_extern.main_is_init && !g_extern.libretro_dummy)
    {
       fill_rect(rgui->frame_buf, rgui->frame_buf_pitch,
-            0, 0, 10, 10, hightlight_filler);
+            0, 0, 10, 10, 0xf00f);
+   }*/
+   //gx2 = gx2 + 1;
+   //fill_rect(rgui->frame_buf, rgui->frame_buf_pitch, gx2, 0, 192, 192, 0xf00f);
+
+   //position.x = position.x + 1;
+
+   /*SDL_FillRect(screen, NULL, SDL_MapRGBA(screen->format, 0, 0, 0, 128));
+
+   SDL_BlitSurface(image, NULL, screen, &position);
+
+   SDL_Flip(screen);
+
+   SDL_PixelFormat *fmt;
+   Uint32 temp, pixel;
+   Uint8 red, green, blue, alpha;
+
+   fmt = screen->format;
+   SDL_LockSurface(screen);
+
+   for (int x = 0; x < 1440; x++) {
+      for (int y = 0; y < 900; y++) {
+         pixel = ((Uint32*)screen->pixels)[(y * 1440) + x];
+
+         temp = pixel & fmt->Rmask;
+         temp = temp >> fmt->Rshift;
+         red = temp << fmt->Rloss;
+
+         temp = pixel & fmt->Gmask;
+         temp = temp >> fmt->Gshift;
+         green = temp << fmt->Gloss;
+
+         temp = pixel & fmt->Bmask;
+         temp = temp >> fmt->Bshift;
+         blue = temp << fmt->Bloss;
+
+         temp = pixel & fmt->Amask;
+         temp = temp >> fmt->Ashift;
+         alpha = temp << fmt->Aloss;
+
+         uint16_t rgba = (red/16 * 4096) + (green/16 * 256) + (blue/16 * 16) + 0x8;
+
+         rgui->frame_buf[y * (rgui->frame_buf_pitch >> 1) + x] = rgba;
+      }
    }
-}
 
-void load_menu_game_prepare(void)
-{
-   // redraw RGUI frame
-   rgui->old_input_state = rgui->trigger_state = 0;
-   rgui->do_held = false;
-   rgui->msg_force = true;
-
-   // Draw frame for loading message
-   if (driver.video_poke && driver.video_poke->set_texture_enable)
-      driver.video_poke->set_texture_enable(driver.video_data, rgui->frame_buf_show, MENU_TEXTURE_FULLSCREEN);
-
-   if (driver.video)
-      rarch_render_cached_frame();
-
-   if (driver.video_poke && driver.video_poke->set_texture_enable)
-      driver.video_poke->set_texture_enable(driver.video_data, false,
-            MENU_TEXTURE_FULLSCREEN);
+   SDL_UnlockSurface(screen);*/
 }
 
 static void menu_update_libretro_info(void)
@@ -314,7 +388,9 @@ static int menu_iterate_func(void *data, unsigned action)
 {
    rgui_handle_t *rgui = (rgui_handle_t*)data;
 
-   rgui_set_texture(rgui, false);
+   if (driver.video_poke && driver.video_poke->set_texture_enable)
+      driver.video_poke->set_texture_frame(driver.video_data, rgui->frame_buf,
+            false, rgui->width, rgui->height, 1.0f);
 
    switch (action)
    {
@@ -361,6 +437,7 @@ static int menu_iterate_func(void *data, unsigned action)
 
 bool menu_iterate(void)
 {
+
    rarch_time_t time, delta, target_msec, sleep_msec;
    unsigned action;
    static bool initial_held = true;
@@ -442,6 +519,7 @@ bool menu_iterate(void)
 
    input_entry_ret = menu_iterate_func(rgui, action); // ret = -1 to launch
 
+   // enable rendering of the menu
    if (driver.video_poke && driver.video_poke->set_texture_enable)
       driver.video_poke->set_texture_enable(driver.video_data, rgui->frame_buf_show, MENU_TEXTURE_FULLSCREEN);
 
@@ -456,9 +534,9 @@ bool menu_iterate(void)
       rarch_sleep((unsigned int)sleep_msec);
    rgui->last_time = rarch_get_time_usec();
 
+   // disable rendering of the menu
    if (driver.video_poke && driver.video_poke->set_texture_enable)
-      driver.video_poke->set_texture_enable(driver.video_data, false,
-            MENU_TEXTURE_FULLSCREEN);
+      driver.video_poke->set_texture_enable(driver.video_data, false, MENU_TEXTURE_FULLSCREEN);
 
    ret = rgui_input_postprocess(rgui, rgui->old_input_state);
 

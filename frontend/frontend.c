@@ -48,8 +48,6 @@ int main(int argc, char *argv[])
       }
       else if (g_extern.lifecycle_state & (1ULL << MODE_LOAD_GAME))
       {
-         load_menu_game_prepare();
-
          // If ROM load fails, we exit RetroArch. On console it might make more sense to go back to menu though ...
          if (load_menu_game())
             g_extern.lifecycle_state |= (1ULL << MODE_GAME);

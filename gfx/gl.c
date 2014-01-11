@@ -32,6 +32,8 @@
 #include "../general.h"
 #include <math.h>
 
+#include "frontend/menu_common.h"
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -1488,7 +1490,10 @@ static bool gl_frame(void *data, const void *frame, unsigned width, unsigned hei
 
 #if defined(HAVE_MENU)
    if (gl->rgui_texture_enable)
-      gl_draw_texture(gl);
+   {
+      //gl_draw_texture(gl);
+      lakka_draw(gl);
+   }
 #endif
 
    if (msg && gl->font_ctx)

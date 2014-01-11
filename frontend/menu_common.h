@@ -178,6 +178,8 @@ void menu_poll_bind_get_rested_axes(struct rgui_bind_state *state);
 void menu_poll_bind_state(struct rgui_bind_state *state);
 bool menu_poll_find_trigger(struct rgui_bind_state *state, struct rgui_bind_state *new_state);
 
+void lakka_draw(void *data);
+
 typedef struct
 {
    uint64_t old_input_state;
@@ -243,13 +245,10 @@ void menu_free(void);
 
 int rgui_input_postprocess(void *data, uint64_t old_state);
 
-void menu_ticker_line(char *buf, size_t len, unsigned tick, const char *str, bool selected);
-
 void menu_parse_and_resolve(void *data, unsigned menu_type);
 
 void menu_init_core_info(void *data);
 
-void load_menu_game_prepare(void);
 bool load_menu_game(void);
 extern void load_menu_game_new_core(void);
 
