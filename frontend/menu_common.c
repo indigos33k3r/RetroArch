@@ -35,18 +35,30 @@
 
 #define FBWIDTH 480
 #define FBHEIGHT 300
+#define HSPACING 127
+
+typedef struct
+{
+   char*  name;
+   GLuint icon;
+   int    alpha;
+   int    zoom;
+   int    active_item;
+} menu_category;
+
+menu_category categories[4];
+
+int menu_active_category;
+
+float all_categories_x = 0;
+int dotween = 0;
+float running = 0;
+float initial = 0;
+float target = 0;
 
 static uint16_t menu_framebuf[FBWIDTH * FBHEIGHT];
 
 rgui_handle_t *rgui;
-
-int num_items;
-int active_item;
-
-/*SDL_Surface *screen;
-SDL_Surface *image;
-
-SDL_Rect position;*/
 
 GLuint image;
 
@@ -67,26 +79,59 @@ static rgui_handle_t *rgui_init(void)
    oldTimeSinceStart = 0;
    printf("%f\n", timeSinceStart);
 
-   /*if (SDL_Init(SDL_INIT_VIDEO) == -1) // Démarrage de la SDL. Si erreur :
-   {
-      fprintf(stderr, "Erreur d'initialisation de la SDL : %s\n", SDL_GetError()); // Écriture de l'erreur
-      exit(EXIT_FAILURE); // On quitte le programme
-   }
+   menu_active_category = 0;
 
-   screen = SDL_CreateRGBSurface(SDL_HWSURFACE, FBWIDTH, FBHEIGHT, 32, 0, 0, 0, 0);
+   menu_category cat0;
+   cat0.name = "Settings";
+   cat0.icon = image = SOIL_load_OGL_texture
+      (
+         "media/lakka/settings.png",
+         SOIL_LOAD_AUTO,
+         SOIL_CREATE_NEW_ID,
+         SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
+      );
+   cat0.alpha = 255;
+   cat0.active_item = 0;
+   categories[0] = cat0;
 
-   image = SDL_LoadBMP("nes.bmp");
+   menu_category cat1;
+   cat1.name = "Nintendo Entertainment System";
+   cat1.icon = image = SOIL_load_OGL_texture
+      (
+         "media/lakka/nes.png",
+         SOIL_LOAD_AUTO,
+         SOIL_CREATE_NEW_ID,
+         SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
+      );
+   cat1.alpha = 128;
+   cat1.active_item = 0;
+   categories[1] = cat1;
 
-   position.x = 0;
-   position.y = 0;*/
+   menu_category cat2;
+   cat2.name = "Super Nintendo";
+   cat2.icon = image = SOIL_load_OGL_texture
+      (
+         "media/lakka/snes.png",
+         SOIL_LOAD_AUTO,
+         SOIL_CREATE_NEW_ID,
+         SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
+      );
+   cat2.alpha = 128;
+   cat2.active_item = 0;
+   categories[2] = cat2;
 
-   image = SOIL_load_OGL_texture
-   (
-      "media/lakka/nes.png",
-      SOIL_LOAD_AUTO,
-      SOIL_CREATE_NEW_ID,
-      SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
-   );
+   menu_category cat3;
+   cat3.name = "SEGA Megadrive";
+   cat3.icon = image = SOIL_load_OGL_texture
+      (
+         "media/lakka/megadrive.png",
+         SOIL_LOAD_AUTO,
+         SOIL_CREATE_NEW_ID,
+         SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
+      );
+   cat3.alpha = 128;
+   cat3.active_item = 0;
+   categories[3] = cat3;
 
    uint16_t *framebuf = menu_framebuf;
    size_t framebuf_pitch;
@@ -121,50 +166,37 @@ int rgui_input_postprocess(void *data, uint64_t old_state)
    return ret;
 }
 
-static void rgui_free(void *data)
+//t,b,c,d = self.running, initial[k], v - initial[k], self.time
+float inOutQuad(float t, float b, float c, float d)
 {
-   //SDL_Quit();
-
-   rgui_handle_t *rgui = (rgui_handle_t*)data;
+   t = t / d * 2;
+   if (t < 1)
+      return c / 2 * pow(t, 2) + b;
+   return -c / 2 * ((t - 1) * (t - 3) - 1) + b;
 }
 
-/*static void fill_rect(uint16_t *buf, unsigned pitch,
-      unsigned x, unsigned y,
-      unsigned width, unsigned height, uint16_t color)
+/*void easeWithTween(  float (*fp)(float, float, float, float))
 {
-   unsigned j, i;
-   for (j = y; j < y + height; j++)
-      for (i = x; i < x + width; i++)
-         buf[j * (pitch >> 1) + i] = color;
+   all_categories_x = 
 }*/
 
-void lakka_draw(void *data)
+void switch_categories()
 {
+   dotween = 1;
+   running = 0;
+   initial = all_categories_x;
+   target = -menu_active_category * HSPACING;
+}
 
-   timeSinceStart = (float)clock()/CLOCKS_PER_SEC;
-   deltaTime = timeSinceStart - oldTimeSinceStart;
-   oldTimeSinceStart = timeSinceStart;
-
-   printf("%f\n", 1.0/deltaTime);
-
-   if (gx > 190.0/FBWIDTH)
-   {
-      gx = 190.0/FBWIDTH;
-      v = -v;
-   }
-
-   if (gx < 0)
-   {
-      gx = 0;
-      v = -v;
-   }
-
-   gx = gx + v*deltaTime;
-
-   glBindTexture(GL_TEXTURE_2D, image);
-   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-   glTranslated(gx, 0, 0);
+void draw_category(GLuint texture, float x, float y)
+{
+   glEnable(GL_BLEND);
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+   glLoadIdentity();
+   glBindTexture(GL_TEXTURE_2D, texture);
+   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   glTranslated(x/FBWIDTH, (FBHEIGHT-y)/FBHEIGHT, 0);
    glBegin(GL_QUADS);
    glTexCoord2d(0,0);    glVertex2d(  0.0/FBWIDTH,   0.0/FBHEIGHT);
    glTexCoord2d(0,1);    glVertex2d(  0.0/FBWIDTH, 64.0/FBHEIGHT);
@@ -173,82 +205,23 @@ void lakka_draw(void *data)
    glEnd();
 }
 
-static void rgui_render(void *data)
+void lakka_draw(void *data)
 {
-   rgui_handle_t *rgui = (rgui_handle_t*)data;
+   timeSinceStart = (float)clock()/CLOCKS_PER_SEC;
+   deltaTime = timeSinceStart - oldTimeSinceStart;
+   oldTimeSinceStart = timeSinceStart;
 
-   if (rgui->need_refresh && 
-         (g_extern.lifecycle_state & (1ULL << MODE_MENU))
-         && !rgui->msg_force)
-      return;
-
-   //fill_rect(rgui->frame_buf, rgui->frame_buf_pitch, 0, 0, rgui->width, rgui->height, 0xfff8);
-   /*
-   for (int i = 0; i < 3; i++)
-   {
-      if (i == active_item)
-      {
-         fill_rect(rgui->frame_buf, rgui->frame_buf_pitch,
-            100 + (200*i), 100, 100, 100, 0xf00f);
-      }
-      else
-      {
-         fill_rect(rgui->frame_buf, rgui->frame_buf_pitch,
-            100 + (200*i), 100, 100, 100, 0x0f0f);
-      }
+   if (dotween) {
+      running = running + deltaTime;
+      //easeWithTween( , &inOutQuad)
+      all_categories_x = inOutQuad(running, initial, target - initial, 0.025);
+      dotween = (running < 0.025);
    }
 
-   // A game is loaded, display its menu
-   if (g_extern.main_is_init && !g_extern.libretro_dummy)
+   for(int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
    {
-      fill_rect(rgui->frame_buf, rgui->frame_buf_pitch,
-            0, 0, 10, 10, 0xf00f);
-   }*/
-   //gx2 = gx2 + 1;
-   //fill_rect(rgui->frame_buf, rgui->frame_buf_pitch, gx2, 0, 192, 192, 0xf00f);
-
-   //position.x = position.x + 1;
-
-   /*SDL_FillRect(screen, NULL, SDL_MapRGBA(screen->format, 0, 0, 0, 128));
-
-   SDL_BlitSurface(image, NULL, screen, &position);
-
-   SDL_Flip(screen);
-
-   SDL_PixelFormat *fmt;
-   Uint32 temp, pixel;
-   Uint8 red, green, blue, alpha;
-
-   fmt = screen->format;
-   SDL_LockSurface(screen);
-
-   for (int x = 0; x < 1440; x++) {
-      for (int y = 0; y < 900; y++) {
-         pixel = ((Uint32*)screen->pixels)[(y * 1440) + x];
-
-         temp = pixel & fmt->Rmask;
-         temp = temp >> fmt->Rshift;
-         red = temp << fmt->Rloss;
-
-         temp = pixel & fmt->Gmask;
-         temp = temp >> fmt->Gshift;
-         green = temp << fmt->Gloss;
-
-         temp = pixel & fmt->Bmask;
-         temp = temp >> fmt->Bshift;
-         blue = temp << fmt->Bloss;
-
-         temp = pixel & fmt->Amask;
-         temp = temp >> fmt->Ashift;
-         alpha = temp << fmt->Aloss;
-
-         uint16_t rgba = (red/16 * 4096) + (green/16 * 256) + (blue/16 * 16) + 0x8;
-
-         rgui->frame_buf[y * (rgui->frame_buf_pitch >> 1) + x] = rgba;
-      }
+      draw_category(categories[i].icon, all_categories_x + 16 + HSPACING*(i+1), 100+32);
    }
-
-   SDL_UnlockSurface(screen);*/
 }
 
 static void menu_update_libretro_info(void)
@@ -316,9 +289,6 @@ bool load_menu_game(void)
 
 void menu_init(void)
 {
-   active_item = 0;
-   num_items = 3;
-
    rgui = rgui_init();
 
    strlcpy(rgui->base_path, g_settings.rgui_browser_directory, sizeof(rgui->base_path));
@@ -338,8 +308,6 @@ void menu_init(void)
 
 void menu_free(void)
 {
-   rgui_free(rgui);
-
 #ifdef HAVE_DYNAMIC
    libretro_free_system_info(&rgui->info);
 #endif
@@ -395,33 +363,35 @@ static int menu_iterate_func(void *data, unsigned action)
    switch (action)
    {
       case RGUI_ACTION_LEFT:
-         if (active_item > 0)
+         if (menu_active_category > 0)
          {
-            active_item--;
+            menu_active_category--;
+            switch_categories();
          }
          break;
 
       case RGUI_ACTION_RIGHT:
-         if (active_item < num_items - 1)
+         if (menu_active_category < sizeof(categories) / sizeof(menu_category) - 1)
          {
-            active_item++;
+            menu_active_category++;
+            switch_categories();
          }
          break;
 
       case RGUI_ACTION_OK:
-         if (active_item == 0) {
+         //if (active_item == 0) {
             strlcpy(g_extern.fullpath, "/home/kivutar/Jeux/roms/sonic3.smd", sizeof(g_extern.fullpath));
             strlcpy(g_settings.libretro, "/usr/lib/libretro/libretro-genplus.so", sizeof(g_settings.libretro));
             g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
             return -1;
-         } 
+         /*} 
          else if (active_item == 1)
          {
             strlcpy(g_extern.fullpath, "/home/kivutar/Jeux/roms/zelda.smc", sizeof(g_extern.fullpath));
             strlcpy(g_settings.libretro, "/usr/lib/libretro/libretro-snes9x-next.so", sizeof(g_settings.libretro));
             g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
             return -1;
-         }
+         }*/
          break;
 
       default:
@@ -429,8 +399,6 @@ static int menu_iterate_func(void *data, unsigned action)
    }
 
    rgui->need_refresh = false;
-
-   rgui_render(rgui);
 
    return 0;
 }
