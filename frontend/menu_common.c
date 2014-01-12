@@ -133,6 +133,24 @@ void switch_categories()
    }
 }
 
+void draw_background()
+{
+   glEnable(GL_BLEND);
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+   glLoadIdentity();
+   glColor4f(0.0, 0.0, 0.0, 0.75);
+   glBindTexture(GL_TEXTURE_2D, NULL);
+   glBegin(GL_TRIANGLES);
+      glTexCoord2d(0,0);    glVertex2d(0.0, 0.0);
+      glTexCoord2d(0,1);    glVertex2d(0.0, 1.0);
+      glTexCoord2d(1,1);    glVertex2d(1.0, 1.0);
+      glTexCoord2d(0,0);    glVertex2d(0.0, 0.0);
+      glTexCoord2d(1,1);    glVertex2d(1.0, 1.0);
+      glTexCoord2d(1,0);    glVertex2d(1.0, 0.0);
+   glEnd();
+   glDisable(GL_BLEND);
+}
+
 void draw_category(GLuint texture, float x, float y, float alpha)
 {
    glEnable(GL_BLEND);
@@ -150,6 +168,8 @@ void draw_category(GLuint texture, float x, float y, float alpha)
       glTexCoord2d(1,0);    glVertex2d(64.0/FBWIDTH,   0.0/FBHEIGHT);
    glEnd();
    glColor4f(1, 1, 1, 1);
+   glDisable(GL_BLEND);
+   glBindTexture(GL_TEXTURE_2D, NULL);
 }
 
 void lakka_draw(void *data)
@@ -161,6 +181,11 @@ void lakka_draw(void *data)
    //printf("%f\n", 1.0/dt);
 
    update_tweens(dt);
+
+   gl_t *gl = (gl_t*)data;
+   glViewport(0, 0, gl->win_width, gl->win_height);
+
+   draw_background();
 
    for(int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
    {
@@ -318,19 +343,19 @@ static int menu_iterate_func(void *data, unsigned action)
          break;
 
       case RGUI_ACTION_OK:
-         //if (active_item == 0) {
+         if (menu_active_category == 0) {
             strlcpy(g_extern.fullpath, "/home/kivutar/Jeux/roms/sonic3.smd", sizeof(g_extern.fullpath));
             strlcpy(g_settings.libretro, "/usr/lib/libretro/libretro-genplus.so", sizeof(g_settings.libretro));
             g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
             return -1;
-         /*} 
-         else if (active_item == 1)
+         } 
+         else if (menu_active_category == 1)
          {
             strlcpy(g_extern.fullpath, "/home/kivutar/Jeux/roms/zelda.smc", sizeof(g_extern.fullpath));
             strlcpy(g_settings.libretro, "/usr/lib/libretro/libretro-snes9x-next.so", sizeof(g_settings.libretro));
             g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
             return -1;
-         }*/
+         }
          break;
 
       default:
@@ -440,7 +465,7 @@ bool menu_iterate(void)
 
    // disable rendering of the menu
    if (driver.video_poke && driver.video_poke->set_texture_enable)
-      driver.video_poke->set_texture_enable(driver.video_data, true, MENU_TEXTURE_FULLSCREEN);
+      driver.video_poke->set_texture_enable(driver.video_data, false, MENU_TEXTURE_FULLSCREEN);
 
    ret = rgui_input_postprocess(rgui, rgui->old_input_state);
 
