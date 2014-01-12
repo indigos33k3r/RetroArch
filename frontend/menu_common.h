@@ -26,6 +26,9 @@
 #include "../performance.h"
 #include "../core_info.h"
 
+#include "../gfx/gl_common.h"
+#include "../gfx/gfx_common.h"
+
 #define MENU_TEXTURE_FULLSCREEN false
 
 #ifndef __cplusplus
@@ -238,6 +241,15 @@ typedef struct
 } rgui_handle_t;
 
 extern rgui_handle_t *rgui;
+
+typedef struct
+{
+   char*  name;
+   GLuint icon;
+   float  alpha;
+   int    zoom;
+   int    active_item;
+} menu_category;
 
 void menu_init(void);
 bool menu_iterate(void);

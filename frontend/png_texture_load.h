@@ -14,24 +14,8 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "math.h"
+#include "../gfx/gl_common.h"
+#include "../gfx/gfx_common.h"
+#include <png.h>
 
-typedef float (*easingFunc)(float, float, float, float);
-
-float inOutQuad(float, float, float, float);
-
-typedef struct
-{
-   int    alive;
-   float  duration;
-   float  running_since;
-   float  initial_value;
-   float  target_value;
-   float* subject;
-   easingFunc easing;
-} tween;
-
-tween update_tween(tween, float);
-void update_tweens(float);
-void add_tween(float, float, float, float*, easingFunc);
-void free_tweens();
+GLuint png_texture_load(const char *, int *, int *);
