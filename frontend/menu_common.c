@@ -21,7 +21,7 @@
 #include <limits.h>
 #include <ctype.h>
 #include <time.h>
-#include <SOIL/SOIL.h>
+#include <png.h>
 #include "menu_common.h"
 #include "tween.h"
 
@@ -51,6 +51,8 @@ menu_category categories[4];
 
 int menu_active_category = 0;
 
+int dim = 256;
+
 float all_categories_x = 0;
 
 tween tw1;
@@ -71,6 +73,161 @@ double v = 1.0;
 //forward decl
 static int menu_iterate_func(void *data, unsigned action);
 
+// thanks to https://github.com/DavidEGrayson/ahrs-visualizer/blob/master/png_texture.cpp
+GLuint png_texture_load(const char * file_name, int * width, int * height)
+{
+    png_byte header[8];
+
+    FILE *fp = fopen(file_name, "rb");
+    if (fp == 0)
+    {
+        perror(file_name);
+        return 0;
+    }
+
+    // read the header
+    fread(header, 1, 8, fp);
+
+    if (png_sig_cmp(header, 0, 8))
+    {
+        fprintf(stderr, "error: %s is not a PNG.\n", file_name);
+        fclose(fp);
+        return 0;
+    }
+
+    png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!png_ptr)
+    {
+        fprintf(stderr, "error: png_create_read_struct returned 0.\n");
+        fclose(fp);
+        return 0;
+    }
+
+    // create png info struct
+    png_infop info_ptr = png_create_info_struct(png_ptr);
+    if (!info_ptr)
+    {
+        fprintf(stderr, "error: png_create_info_struct returned 0.\n");
+        png_destroy_read_struct(&png_ptr, (png_infopp)NULL, (png_infopp)NULL);
+        fclose(fp);
+        return 0;
+    }
+
+    // create png info struct
+    png_infop end_info = png_create_info_struct(png_ptr);
+    if (!end_info)
+    {
+        fprintf(stderr, "error: png_create_info_struct returned 0.\n");
+        png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp) NULL);
+        fclose(fp);
+        return 0;
+    }
+
+    // the code in this if statement gets called if libpng encounters an error
+    if (setjmp(png_jmpbuf(png_ptr))) {
+        fprintf(stderr, "error from libpng\n");
+        png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+        fclose(fp);
+        return 0;
+    }
+
+    // init png reading
+    png_init_io(png_ptr, fp);
+
+    // let libpng know you already read the first 8 bytes
+    png_set_sig_bytes(png_ptr, 8);
+
+    // read all the info up to the image data
+    png_read_info(png_ptr, info_ptr);
+
+    // variables to pass to get info
+    int bit_depth, color_type;
+    png_uint_32 temp_width, temp_height;
+
+    // get info about png
+    png_get_IHDR(png_ptr, info_ptr, &temp_width, &temp_height, &bit_depth, &color_type,
+        NULL, NULL, NULL);
+
+    if (width){ *width = temp_width; }
+    if (height){ *height = temp_height; }
+
+    //printf("%s: %lux%lu %d\n", file_name, temp_width, temp_height, color_type);
+
+    if (bit_depth != 8)
+    {
+        fprintf(stderr, "%s: Unsupported bit depth %d.  Must be 8.\n", file_name, bit_depth);
+        return 0;
+    }
+
+    GLint format;
+    switch(color_type)
+    {
+    case PNG_COLOR_TYPE_RGB:
+        format = GL_RGB;
+        break;
+    case PNG_COLOR_TYPE_RGB_ALPHA:
+        format = GL_RGBA;
+        break;
+    default:
+        fprintf(stderr, "%s: Unknown libpng color type %d.\n", file_name, color_type);
+        return 0;
+    }
+
+    // Update the png info struct.
+    png_read_update_info(png_ptr, info_ptr);
+
+    // Row size in bytes.
+    int rowbytes = png_get_rowbytes(png_ptr, info_ptr);
+
+    // glTexImage2d requires rows to be 4-byte aligned
+    rowbytes += 3 - ((rowbytes-1) % 4);
+
+    // Allocate the image_data as a big block, to be given to opengl
+    png_byte * image_data = (png_byte *)malloc(rowbytes * temp_height * sizeof(png_byte)+15);
+    if (image_data == NULL)
+    {
+        fprintf(stderr, "error: could not allocate memory for PNG image data\n");
+        png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+        fclose(fp);
+        return 0;
+    }
+
+    // row_pointers is for pointing to image_data for reading the png with libpng
+    png_byte ** row_pointers = (png_byte **)malloc(temp_height * sizeof(png_byte *));
+    if (row_pointers == NULL)
+    {
+        fprintf(stderr, "error: could not allocate memory for PNG row pointers\n");
+        png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+        free(image_data);
+        fclose(fp);
+        return 0;
+    }
+
+    // set the individual row_pointers to point at the correct offsets of image_data
+    for (unsigned int i = 0; i < temp_height; i++)
+    {
+        row_pointers[temp_height - 1 - i] = image_data + i * rowbytes;
+    }
+
+    // read the png into image_data through row_pointers
+    png_read_image(png_ptr, row_pointers);
+
+    // Generate the OpenGL texture object
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, temp_width, temp_height, 0, format, GL_UNSIGNED_BYTE, image_data);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // clean up
+    png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+    free(image_data);
+    free(row_pointers);
+    fclose(fp);
+    return texture;
+}
+
 static rgui_handle_t *rgui_init(void)
 {
    clock_t t = clock();
@@ -79,52 +236,28 @@ static rgui_handle_t *rgui_init(void)
 
    menu_category cat0;
    cat0.name = "Settings";
-   cat0.icon = image = SOIL_load_OGL_texture
-      (
-         "media/lakka/settings.png",
-         SOIL_LOAD_AUTO,
-         SOIL_CREATE_NEW_ID,
-         SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
-      );
+   cat0.icon = png_texture_load("media/lakka/settings.png", &dim, &dim),
    cat0.alpha = 1.0;
    cat0.active_item = 0;
    categories[0] = cat0;
 
    menu_category cat1;
    cat1.name = "Nintendo Entertainment System";
-   cat1.icon = image = SOIL_load_OGL_texture
-      (
-         "media/lakka/nes.png",
-         SOIL_LOAD_AUTO,
-         SOIL_CREATE_NEW_ID,
-         SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
-      );
+   cat1.icon = png_texture_load("media/lakka/nes.png", &dim, &dim),
    cat1.alpha = 0.5;
    cat1.active_item = 0;
    categories[1] = cat1;
 
    menu_category cat2;
    cat2.name = "Super Nintendo";
-   cat2.icon = image = SOIL_load_OGL_texture
-      (
-         "media/lakka/snes.png",
-         SOIL_LOAD_AUTO,
-         SOIL_CREATE_NEW_ID,
-         SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
-      );
+   cat2.icon = png_texture_load("media/lakka/snes.png", &dim, &dim),
    cat2.alpha = 0.5;
    cat2.active_item = 0;
    categories[2] = cat2;
 
    menu_category cat3;
    cat3.name = "SEGA Megadrive";
-   cat3.icon = image = SOIL_load_OGL_texture
-      (
-         "media/lakka/megadrive.png",
-         SOIL_LOAD_AUTO,
-         SOIL_CREATE_NEW_ID,
-         SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
-      );
+   cat3.icon = png_texture_load("media/lakka/megadrive.png", &dim, &dim),
    cat3.alpha = 0.5;
    cat3.active_item = 0;
    categories[3] = cat3;

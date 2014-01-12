@@ -90,7 +90,7 @@ ifneq ($(findstring Linux,$(OS)),)
 endif
 
 ifeq ($(HAVE_RGUI), 1)
-   LIBS += -lSOIL
+   LIBS += -lpng
    OBJ += frontend/menu_common.o frontend/tween.o file_list.o
 	DEFINES += -DHAVE_MENU
 endif
