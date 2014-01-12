@@ -317,9 +317,11 @@ void draw_category(GLuint texture, float x, float y, float alpha)
    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
    glTranslated(x/FBWIDTH, (FBHEIGHT-y)/FBHEIGHT, 0);
-   glBegin(GL_QUADS);
+   glBegin(GL_TRIANGLES);
       glTexCoord2d(0,0);    glVertex2d(  0.0/FBWIDTH,   0.0/FBHEIGHT);
       glTexCoord2d(0,1);    glVertex2d(  0.0/FBWIDTH, 64.0/FBHEIGHT);
+      glTexCoord2d(1,1);    glVertex2d(64.0/FBWIDTH, 64.0/FBHEIGHT);
+      glTexCoord2d(0,0);    glVertex2d(  0.0/FBWIDTH,   0.0/FBHEIGHT);
       glTexCoord2d(1,1);    glVertex2d(64.0/FBWIDTH, 64.0/FBHEIGHT);
       glTexCoord2d(1,0);    glVertex2d(64.0/FBWIDTH,   0.0/FBHEIGHT);
    glEnd();
