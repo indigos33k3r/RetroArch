@@ -31,3 +31,6 @@ typedef struct
    easingFunc easing;
 } tween;
 
+tween update_tween(tween, float);
+void update_tweens(float);
+void add_tween(float, float, float, float*, easingFunc);

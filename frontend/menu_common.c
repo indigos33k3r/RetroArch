@@ -55,8 +55,6 @@ int dim = 256;
 
 float all_categories_x = 0;
 
-tween tw1;
-
 static uint16_t menu_framebuf[FBWIDTH * FBHEIGHT];
 
 rgui_handle_t *rgui;
@@ -297,25 +295,27 @@ int rgui_input_postprocess(void *data, uint64_t old_state)
 
 void switch_categories()
 {
-   tw1.alive = 1;
-   tw1.duration = 0.025;
-   tw1.initial_value = all_categories_x;
-   tw1.target_value = -menu_active_category * HSPACING;
-   tw1.running_since = 0;
-   tw1.subject = &all_categories_x;
-   tw1.easing = &inOutQuad;
+   add_tween(0.025, all_categories_x, -menu_active_category * HSPACING, &all_categories_x, &inOutQuad);
+   
+   for(int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
+   {
+      if (i == menu_active_category) {
+         add_tween(0.025, categories[i].alpha, 1.0, &categories[i].alpha, &inOutQuad);
+      }
+      else
+      {
+         add_tween(0.025, categories[i].alpha, 0.5, &categories[i].alpha, &inOutQuad);
+      }
+   }
 }
 
 void draw_category(GLuint texture, float x, float y, float alpha)
 {
-   printf("%f\n", alpha);
    glEnable(GL_BLEND);
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
    glLoadIdentity();
    glColor4f(1, 1, 1, alpha);
    glBindTexture(GL_TEXTURE_2D, texture);
-   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-   //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
    glTranslated(x/FBWIDTH, (FBHEIGHT-y)/FBHEIGHT, 0);
    glBegin(GL_TRIANGLES);
       glTexCoord2d(0,0);    glVertex2d(  0.0/FBWIDTH,   0.0/FBHEIGHT);
@@ -328,25 +328,13 @@ void draw_category(GLuint texture, float x, float y, float alpha)
    glColor4f(1, 1, 1, 1);
 }
 
-void update_tweens(float dt)
-{
-   if (tw1.running_since < tw1.duration) {
-      tw1.running_since += dt;
-      *(tw1.subject) = tw1.easing(
-         tw1.running_since,
-         tw1.initial_value,
-         tw1.target_value - tw1.initial_value,
-         tw1.duration);
-   }
-}
-
 void lakka_draw(void *data)
 {
    timeSinceStart = (float)clock()/CLOCKS_PER_SEC;
    float dt = timeSinceStart - oldTimeSinceStart;
    oldTimeSinceStart = timeSinceStart;
 
-   printf("%f\n", 1.0/dt);
+   //printf("%f\n", 1.0/dt);
 
    update_tweens(dt);
 
@@ -448,6 +436,7 @@ void menu_free(void)
 
    core_info_list_free(rgui->core_info);
 
+   free_tweens();
    free(rgui);
 }
 
