@@ -440,7 +440,7 @@ bool menu_iterate(void)
 
    // disable rendering of the menu
    if (driver.video_poke && driver.video_poke->set_texture_enable)
-      driver.video_poke->set_texture_enable(driver.video_data, false, MENU_TEXTURE_FULLSCREEN);
+      driver.video_poke->set_texture_enable(driver.video_data, true, MENU_TEXTURE_FULLSCREEN);
 
    ret = rgui_input_postprocess(rgui, rgui->old_input_state);
 
