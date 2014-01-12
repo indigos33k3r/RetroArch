@@ -46,8 +46,6 @@ int dim = 256;
 
 float all_categories_x = 0;
 
-static uint16_t menu_framebuf[FBWIDTH * FBHEIGHT];
-
 rgui_handle_t *rgui;
 
 GLuint image;
@@ -96,17 +94,7 @@ static rgui_handle_t *rgui_init(void)
    cat3.active_item = 0;
    categories[3] = cat3;
 
-   uint16_t *framebuf = menu_framebuf;
-   size_t framebuf_pitch;
-
    rgui_handle_t *rgui = (rgui_handle_t*)calloc(1, sizeof(*rgui));
-
-   rgui->frame_buf = framebuf;
-   rgui->width = FBWIDTH;
-   rgui->height = FBHEIGHT;
-   framebuf_pitch = rgui->width * sizeof(uint16_t);
-
-   rgui->frame_buf_pitch = framebuf_pitch;
 
    return rgui;
 }
@@ -131,16 +119,16 @@ int rgui_input_postprocess(void *data, uint64_t old_state)
 
 void switch_categories()
 {
-   add_tween(0.025, all_categories_x, -menu_active_category * HSPACING, &all_categories_x, &inOutQuad);
+   add_tween(0.01, all_categories_x, -menu_active_category * HSPACING, &all_categories_x, &inOutQuad);
    
    for(int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
    {
       if (i == menu_active_category) {
-         add_tween(0.025, categories[i].alpha, 1.0, &categories[i].alpha, &inOutQuad);
+         add_tween(0.01, categories[i].alpha, 1.0, &categories[i].alpha, &inOutQuad);
       }
       else
       {
-         add_tween(0.025, categories[i].alpha, 0.5, &categories[i].alpha, &inOutQuad);
+         add_tween(0.01, categories[i].alpha, 0.5, &categories[i].alpha, &inOutQuad);
       }
    }
 }
@@ -254,8 +242,6 @@ void menu_init(void)
    rgui->trigger_state = 0;
    rgui->old_input_state = 0;
    rgui->do_held = false;
-   rgui->frame_buf_show = true;
-   rgui->current_pad = 0;
 
    menu_update_libretro_info();
 
@@ -313,10 +299,6 @@ static int menu_iterate_func(void *data, unsigned action)
 {
    rgui_handle_t *rgui = (rgui_handle_t*)data;
 
-   if (driver.video_poke && driver.video_poke->set_texture_enable)
-      driver.video_poke->set_texture_frame(driver.video_data, rgui->frame_buf,
-            false, rgui->width, rgui->height, 1.0f);
-
    switch (action)
    {
       case RGUI_ACTION_LEFT:
@@ -355,8 +337,6 @@ static int menu_iterate_func(void *data, unsigned action)
          break;
    }
 
-   rgui->need_refresh = false;
-
    return 0;
 }
 
@@ -373,7 +353,6 @@ bool menu_iterate(void)
 
    if (g_extern.lifecycle_state & (1ULL << MODE_MENU_PREINIT))
    {
-      rgui->need_refresh = true;
       g_extern.lifecycle_state &= ~(1ULL << MODE_MENU_PREINIT);
       rgui->old_input_state |= 1ULL << RARCH_MENU_TOGGLE;
    }
@@ -446,7 +425,7 @@ bool menu_iterate(void)
 
    // enable rendering of the menu
    if (driver.video_poke && driver.video_poke->set_texture_enable)
-      driver.video_poke->set_texture_enable(driver.video_data, rgui->frame_buf_show, MENU_TEXTURE_FULLSCREEN);
+      driver.video_poke->set_texture_enable(driver.video_data, true, MENU_TEXTURE_FULLSCREEN);
 
    rarch_render_cached_frame();
 

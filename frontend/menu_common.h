@@ -192,19 +192,10 @@ typedef struct
    unsigned delay_timer;
    unsigned delay_count;
 
-   unsigned width;
-   unsigned height;
-
-   uint16_t *frame_buf;
-   size_t frame_buf_pitch;
-   bool frame_buf_show;
-
    file_list_t *menu_stack;
    file_list_t *selection_buf;
    size_t selection_ptr;
-   bool need_refresh;
    bool msg_force;
-   bool push_start_screen;
 
    core_info_list_t *core_info;
    bool defer_core;
@@ -258,8 +249,6 @@ void menu_free(void);
 int rgui_input_postprocess(void *data, uint64_t old_state);
 
 void menu_parse_and_resolve(void *data, unsigned menu_type);
-
-void menu_init_core_info(void *data);
 
 bool load_menu_game(void);
 extern void load_menu_game_new_core(void);
