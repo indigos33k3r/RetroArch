@@ -34,9 +34,9 @@
 
 #include "../compat/posix_string.h"
 
-#define FBWIDTH 480
-#define FBHEIGHT 300
-#define HSPACING 127
+#define FBWIDTH 1440
+#define FBHEIGHT 900
+#define HSPACING 380
 
 menu_category categories[4];
 
@@ -161,11 +161,11 @@ void draw_category(GLuint texture, float x, float y, float alpha)
    glTranslated(x/FBWIDTH, (FBHEIGHT-y)/FBHEIGHT, 0);
    glBegin(GL_TRIANGLES);
       glTexCoord2d(0,0);    glVertex2d(  0.0/FBWIDTH,   0.0/FBHEIGHT);
-      glTexCoord2d(0,1);    glVertex2d(  0.0/FBWIDTH, 64.0/FBHEIGHT);
-      glTexCoord2d(1,1);    glVertex2d(64.0/FBWIDTH, 64.0/FBHEIGHT);
+      glTexCoord2d(0,1);    glVertex2d(  0.0/FBWIDTH, 192.0/FBHEIGHT);
+      glTexCoord2d(1,1);    glVertex2d(192.0/FBWIDTH, 192.0/FBHEIGHT);
       glTexCoord2d(0,0);    glVertex2d(  0.0/FBWIDTH,   0.0/FBHEIGHT);
-      glTexCoord2d(1,1);    glVertex2d(64.0/FBWIDTH, 64.0/FBHEIGHT);
-      glTexCoord2d(1,0);    glVertex2d(64.0/FBWIDTH,   0.0/FBHEIGHT);
+      glTexCoord2d(1,1);    glVertex2d(192.0/FBWIDTH, 192.0/FBHEIGHT);
+      glTexCoord2d(1,0);    glVertex2d(192.0/FBWIDTH,   0.0/FBHEIGHT);
    glEnd();
    glColor4f(1, 1, 1, 1);
    glDisable(GL_BLEND);
@@ -189,7 +189,7 @@ void lakka_draw(void *data)
 
    for(int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
    {
-      draw_category(categories[i].icon, all_categories_x + 16 + HSPACING*(i+1), 100+32, categories[i].alpha);
+      draw_category(categories[i].icon, all_categories_x + 156 + 96 + HSPACING*(i+1), 300+96, categories[i].alpha);
    }
 }
 
