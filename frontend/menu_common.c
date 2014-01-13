@@ -40,10 +40,10 @@
 #define HSPACING 380
 
 const GLfloat background_color[] = {
-   1.0f, 0.0f, 0.0f, 1.0f,
-   1.0f, 0.0f, 0.0f, 1.0f,
-   1.0f, 0.0f, 0.0f, 1.0f,
-   1.0f, 0.0f, 0.0f, 1.0f,
+   1.0f, 0.0f, 0.0f, 0.5f,
+   1.0f, 0.0f, 0.0f, 0.5f,
+   1.0f, 0.0f, 0.0f, 0.5f,
+   1.0f, 0.0f, 0.0f, 0.5f,
 };
 
 menu_category categories[4];
@@ -373,7 +373,7 @@ static int menu_iterate_func(void *data, unsigned action)
 
       case RGUI_ACTION_OK:
          if (menu_active_category == 0) {
-            strlcpy(g_extern.fullpath, "/storage/roms/sonic3.smd", sizeof(g_extern.fullpath));
+            strlcpy(g_extern.fullpath, "/home/kivutar/Jeux/roms/sonic3.smd", sizeof(g_extern.fullpath));
             strlcpy(g_settings.libretro, "/usr/lib/libretro/libretro-genplus.so", sizeof(g_settings.libretro));
             g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
             return -1;
