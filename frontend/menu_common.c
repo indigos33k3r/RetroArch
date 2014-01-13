@@ -381,7 +381,7 @@ static int menu_iterate_func(void *data, unsigned action)
          else if (menu_active_category == 1)
          {
             strlcpy(g_extern.fullpath, "/storage/roms/zelda.smc", sizeof(g_extern.fullpath));
-            strlcpy(g_settings.libretro, "/usr/lib/libretro/libretro-snes9x-next.so", sizeof(g_settings.libretro));
+            strlcpy(g_settings.libretro, "/usr/lib/libretro/pocketsnes-libretro.so", sizeof(g_settings.libretro));
             g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
             return -1;
          }
