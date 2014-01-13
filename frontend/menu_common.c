@@ -25,6 +25,7 @@
 #include "tween.h"
 #include "png_texture_load.h"
 
+#include "../gfx/shader_common.h"
 #include "../gfx/gl_common.h"
 #include "../gfx/gfx_common.h"
 #include "../performance.h"
@@ -37,6 +38,13 @@
 #define FBWIDTH 1440
 #define FBHEIGHT 900
 #define HSPACING 380
+
+const GLfloat background_color[] = {
+   0.0f, 0.0f, 0.0f, 0.8f,
+   0.0f, 0.0f, 0.0f, 0.8f,
+   0.0f, 0.0f, 0.0f, 0.8f,
+   0.0f, 0.0f, 0.0f, 0.8f,
+};
 
 menu_category categories[4];
 
@@ -133,43 +141,63 @@ void switch_categories()
    }
 }
 
-void draw_background()
+void draw_background(void *data)
 {
+   gl_t *gl = (gl_t*)data;
+
    glEnable(GL_BLEND);
-   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-   glLoadIdentity();
-   glColor4f(0.0, 0.0, 0.0, 0.75);
-   glBindTexture(GL_TEXTURE_2D, NULL);
-   glBegin(GL_TRIANGLES);
-      glTexCoord2d(0,0);    glVertex2d(0.0, 0.0);
-      glTexCoord2d(0,1);    glVertex2d(0.0, 1.0);
-      glTexCoord2d(1,1);    glVertex2d(1.0, 1.0);
-      glTexCoord2d(0,0);    glVertex2d(0.0, 0.0);
-      glTexCoord2d(1,1);    glVertex2d(1.0, 1.0);
-      glTexCoord2d(1,0);    glVertex2d(1.0, 0.0);
-   glEnd();
+
+   gl->coords.tex_coord = gl->tex_coords;
+   gl->coords.color = background_color;
+
+   if (gl->shader)
+      gl->shader->use(GL_SHADER_STOCK_BLEND);
+   gl_shader_set_coords(gl, &gl->coords, &gl->mvp_no_rot);
+
+
+   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
    glDisable(GL_BLEND);
+   gl->coords.color = gl->white_color_ptr;
 }
 
-void draw_category(GLuint texture, float x, float y, float alpha)
+void draw_category(void *data, GLuint texture, float x, float y, float alpha)
 {
+   gl_t *gl = (gl_t*)data;
+
+   glViewport(x, 900-y, 192, 192);
+
    glEnable(GL_BLEND);
-   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-   glLoadIdentity();
-   glColor4f(1, 1, 1, alpha);
+
+   GLfloat color[] = {
+      1.0f, 1.0f, 1.0f, alpha,
+      1.0f, 1.0f, 1.0f, alpha,
+      1.0f, 1.0f, 1.0f, alpha,
+      1.0f, 1.0f, 1.0f, alpha,
+   };
+
+   static const GLfloat vtest[] = {
+      0, 0,
+      1, 0,
+      0, 1,
+      1, 1
+   };
+
+   gl->coords.vertex = vtest;
+   gl->coords.tex_coord = vtest;
+   gl->coords.color = color;
    glBindTexture(GL_TEXTURE_2D, texture);
-   glTranslated(x/FBWIDTH, (FBHEIGHT-y)/FBHEIGHT, 0);
-   glBegin(GL_TRIANGLES);
-      glTexCoord2d(0,0);    glVertex2d(  0.0/FBWIDTH,   0.0/FBHEIGHT);
-      glTexCoord2d(0,1);    glVertex2d(  0.0/FBWIDTH, 192.0/FBHEIGHT);
-      glTexCoord2d(1,1);    glVertex2d(192.0/FBWIDTH, 192.0/FBHEIGHT);
-      glTexCoord2d(0,0);    glVertex2d(  0.0/FBWIDTH,   0.0/FBHEIGHT);
-      glTexCoord2d(1,1);    glVertex2d(192.0/FBWIDTH, 192.0/FBHEIGHT);
-      glTexCoord2d(1,0);    glVertex2d(192.0/FBWIDTH,   0.0/FBHEIGHT);
-   glEnd();
-   glColor4f(1, 1, 1, 1);
+
+   if (gl->shader)
+      gl->shader->use(GL_SHADER_STOCK_BLEND);
+   gl_shader_set_coords(gl, &gl->coords, &gl->mvp_no_rot);
+
+   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
    glDisable(GL_BLEND);
-   glBindTexture(GL_TEXTURE_2D, NULL);
+
+   glViewport(0, 0, gl->win_width, gl->win_height);
+   gl->coords.vertex = gl->vertex_ptr;
+   gl->coords.tex_coord = gl->tex_coords;
+   gl->coords.color = gl->white_color_ptr;
 }
 
 void lakka_draw(void *data)
@@ -185,11 +213,11 @@ void lakka_draw(void *data)
    gl_t *gl = (gl_t*)data;
    glViewport(0, 0, gl->win_width, gl->win_height);
 
-   draw_background();
+   draw_background(gl);
 
    for(int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
    {
-      draw_category(categories[i].icon, all_categories_x + 156 + 96 + HSPACING*(i+1), 300+96, categories[i].alpha);
+      draw_category(gl, categories[i].icon, all_categories_x + 35 + HSPACING*(i+1), 300+96, categories[i].alpha);
    }
 }
 
