@@ -76,28 +76,28 @@ static rgui_handle_t *rgui_init(void)
 
    menu_category cat0;
    cat0.name = "Settings";
-   cat0.icon = png_texture_load("media/lakka/settings.png", &dim, &dim),
+   cat0.icon = png_texture_load("/usr/share/retroarch/settings.png", &dim, &dim),
    cat0.alpha = 1.0;
    cat0.active_item = 0;
    categories[0] = cat0;
 
    menu_category cat1;
    cat1.name = "Nintendo Entertainment System";
-   cat1.icon = png_texture_load("media/lakka/nes.png", &dim, &dim),
+   cat1.icon = png_texture_load("/usr/share/retroarch/nes.png", &dim, &dim),
    cat1.alpha = 0.5;
    cat1.active_item = 0;
    categories[1] = cat1;
 
    menu_category cat2;
    cat2.name = "Super Nintendo";
-   cat2.icon = png_texture_load("media/lakka/snes.png", &dim, &dim),
+   cat2.icon = png_texture_load("/usr/share/retroarch/snes.png", &dim, &dim),
    cat2.alpha = 0.5;
    cat2.active_item = 0;
    categories[2] = cat2;
 
    menu_category cat3;
    cat3.name = "SEGA Megadrive";
-   cat3.icon = png_texture_load("media/lakka/megadrive.png", &dim, &dim),
+   cat3.icon = png_texture_load("/usr/share/retroarch/megadrive.png", &dim, &dim),
    cat3.alpha = 0.5;
    cat3.active_item = 0;
    categories[3] = cat3;
