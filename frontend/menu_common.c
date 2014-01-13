@@ -40,10 +40,10 @@
 #define HSPACING 380
 
 const GLfloat background_color[] = {
-   0.0f, 0.0f, 0.0f, 0.8f,
-   0.0f, 0.0f, 0.0f, 0.8f,
-   0.0f, 0.0f, 0.0f, 0.8f,
-   0.0f, 0.0f, 0.0f, 0.8f,
+   1.0f, 0.0f, 0.0f, 1.0f,
+   1.0f, 0.0f, 0.0f, 1.0f,
+   1.0f, 0.0f, 0.0f, 1.0f,
+   1.0f, 0.0f, 0.0f, 1.0f,
 };
 
 menu_category categories[4];
@@ -149,6 +149,7 @@ void draw_background(void *data)
 
    gl->coords.tex_coord = gl->tex_coords;
    gl->coords.color = background_color;
+   glBindTexture(GL_TEXTURE_2D, NULL);
 
    if (gl->shader)
       gl->shader->use(GL_SHADER_STOCK_BLEND);
