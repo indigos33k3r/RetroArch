@@ -38,15 +38,18 @@
 #define FBWIDTH 1440
 #define FBHEIGHT 900
 #define HSPACING 380
+#define VSPACING 192
 
 const GLfloat background_color[] = {
-   1.0f, 0.0f, 0.0f, 0.5f,
-   1.0f, 0.0f, 0.0f, 0.5f,
-   1.0f, 0.0f, 0.0f, 0.5f,
-   1.0f, 0.0f, 0.0f, 0.5f,
+   0, 200, 200, 0.75,
+   0, 200, 200, 0.75,
+   0, 200, 200, 0.75,
+   0, 200, 200, 0.75,
 };
 
-menu_category categories[4];
+
+
+menu_category categories[8];
 
 int menu_active_category = 0;
 
@@ -74,33 +77,71 @@ static rgui_handle_t *rgui_init(void)
    timeSinceStart = ((float)t)/CLOCKS_PER_SEC;
    oldTimeSinceStart = 0;
 
+   menu_item items[2];
+
+   menu_item item0;
+      item0.name = "Mario";
+      item0.icon = png_texture_load("/usr/share/retroarch/nes-cartidge.png", &dim, &dim);
+      item0.alpha = 0.5;
+      item0.y = VSPACING;
+   items[0] = item0;
+
    menu_category cat0;
-   cat0.name = "Settings";
-   cat0.icon = png_texture_load("/usr/share/retroarch/settings.png", &dim, &dim),
-   cat0.alpha = 1.0;
-   cat0.active_item = 0;
+      cat0.name = "Settings";
+      cat0.icon = png_texture_load("/usr/share/retroarch/settings.png", &dim, &dim);
+      cat0.alpha = 1.0;
+      cat0.active_item = 0;
+      cat0.items = items;
    categories[0] = cat0;
 
    menu_category cat1;
-   cat1.name = "Nintendo Entertainment System";
-   cat1.icon = png_texture_load("/usr/share/retroarch/nes.png", &dim, &dim),
-   cat1.alpha = 0.5;
-   cat1.active_item = 0;
+      cat1.name = "MasterSystem";
+      cat1.icon = png_texture_load("/usr/share/retroarch/mastersystem.png", &dim, &dim);
+      cat1.alpha = 0.5;
+      cat1.active_item = 0;
    categories[1] = cat1;
 
    menu_category cat2;
-   cat2.name = "Super Nintendo";
-   cat2.icon = png_texture_load("/usr/share/retroarch/snes.png", &dim, &dim),
-   cat2.alpha = 0.5;
-   cat2.active_item = 0;
+      cat2.name = "Nintendo Entertainment System";
+      cat2.icon = png_texture_load("/usr/share/retroarch/nes.png", &dim, &dim);
+      cat2.alpha = 0.5;
+      cat2.active_item = 0;
    categories[2] = cat2;
 
    menu_category cat3;
-   cat3.name = "SEGA Megadrive";
-   cat3.icon = png_texture_load("/usr/share/retroarch/megadrive.png", &dim, &dim),
-   cat3.alpha = 0.5;
-   cat3.active_item = 0;
+      cat3.name = "SEGA Megadrive";
+      cat3.icon = png_texture_load("/usr/share/retroarch/megadrive.png", &dim, &dim);
+      cat3.alpha = 0.5;
+      cat3.active_item = 0;
    categories[3] = cat3;
+
+   menu_category cat4;
+      cat4.name = "Super Nintendo";
+      cat4.icon = png_texture_load("/usr/share/retroarch/snes.png", &dim, &dim);
+      cat4.alpha = 0.5;
+      cat4.active_item = 0;
+   categories[4] = cat4;
+
+   menu_category cat5;
+      cat5.name = "PlayStation 1";
+      cat5.icon = png_texture_load("/usr/share/retroarch/ps1.png", &dim, &dim);
+      cat5.alpha = 0.5;
+      cat5.active_item = 0;
+   categories[5] = cat5;
+
+   menu_category cat6;
+      cat6.name = "GameBoy Color";
+      cat6.icon = png_texture_load("/usr/share/retroarch/gameboycolor.png", &dim, &dim);
+      cat6.alpha = 0.5;
+      cat6.active_item = 0;
+   categories[6] = cat6;
+
+   menu_category cat7;
+      cat7.name = "NeoGeo";
+      cat7.icon = png_texture_load("/usr/share/retroarch/neogeo.png", &dim, &dim);
+      cat7.alpha = 0.5;
+      cat7.active_item = 0;
+   categories[7] = cat7;
 
    rgui_handle_t *rgui = (rgui_handle_t*)calloc(1, sizeof(*rgui));
 
@@ -216,9 +257,12 @@ void lakka_draw(void *data)
 
    draw_background(gl);
 
-   for(int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
+   for(int i = 0; i < 1; i++)
    {
       draw_category(gl, categories[i].icon, all_categories_x + 35 + HSPACING*(i+1), 300+96, categories[i].alpha);
+
+      //printf("%s\n", categories[i].items[0].name);
+      draw_category(gl, categories[i].items[0].icon, 600, 600, 1);
    }
 }
 
@@ -364,7 +408,7 @@ static int menu_iterate_func(void *data, unsigned action)
          break;
 
       case RGUI_ACTION_RIGHT:
-         if (menu_active_category < sizeof(categories) / sizeof(menu_category) - 1)
+         if (menu_active_category < 1 / sizeof(menu_category) - 1)
          {
             menu_active_category++;
             switch_categories();

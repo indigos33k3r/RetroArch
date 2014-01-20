@@ -239,8 +239,20 @@ typedef struct
    GLuint icon;
    float  alpha;
    int    zoom;
+   float  y;
+} menu_item;
+
+typedef struct
+{
+   char*  name;
+   GLuint icon;
+   float  alpha;
+   int    zoom;
    int    active_item;
+   struct menu_item *items;
 } menu_category;
+
+
 
 void menu_init(void);
 bool menu_iterate(void);
