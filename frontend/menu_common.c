@@ -47,8 +47,6 @@ const GLfloat background_color[] = {
    0, 200, 200, 0.75,
 };
 
-
-
 menu_category categories[8];
 
 int menu_active_category = 0;
@@ -77,21 +75,17 @@ static rgui_handle_t *rgui_init(void)
    timeSinceStart = ((float)t)/CLOCKS_PER_SEC;
    oldTimeSinceStart = 0;
 
-   menu_item items[2];
-
-   menu_item item0;
-      item0.name = "Mario";
-      item0.icon = png_texture_load("/usr/share/retroarch/nes-cartidge.png", &dim, &dim);
-      item0.alpha = 0.5;
-      item0.y = VSPACING;
-   items[0] = item0;
-
    menu_category cat0;
       cat0.name = "Settings";
       cat0.icon = png_texture_load("/usr/share/retroarch/settings.png", &dim, &dim);
       cat0.alpha = 1.0;
       cat0.active_item = 0;
-      cat0.items = items;
+      cat0.num_items = 1;
+      cat0.items = calloc(cat0.num_items, sizeof(menu_item));
+      cat0.items[0].name = "Mario";
+      cat0.items[0].icon = png_texture_load("/usr/share/retroarch/nes-cartidge.png", &dim, &dim);
+      cat0.items[0].alpha = 0.5;
+      cat0.items[0].y = VSPACING;
    categories[0] = cat0;
 
    menu_category cat1;
@@ -206,7 +200,7 @@ void draw_category(void *data, GLuint texture, float x, float y, float alpha)
 {
    gl_t *gl = (gl_t*)data;
 
-   glViewport(x, 900-y, 192, 192);
+   glViewport(x, FBHEIGHT-y, 192, 192);
 
    glEnable(GL_BLEND);
 
@@ -257,12 +251,12 @@ void lakka_draw(void *data)
 
    draw_background(gl);
 
-   for(int i = 0; i < 1; i++)
+   for(int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
    {
       draw_category(gl, categories[i].icon, all_categories_x + 35 + HSPACING*(i+1), 300+96, categories[i].alpha);
 
-      //printf("%s\n", categories[i].items[0].name);
-      draw_category(gl, categories[i].items[0].icon, 600, 600, 1);
+      if (categories[i].num_items)
+         draw_category(gl, categories[i].items[0].icon, 600, 600, 1);
    }
 }
 
@@ -408,7 +402,7 @@ static int menu_iterate_func(void *data, unsigned action)
          break;
 
       case RGUI_ACTION_RIGHT:
-         if (menu_active_category < 1 / sizeof(menu_category) - 1)
+         if (menu_active_category < sizeof(categories)  / sizeof(menu_category) - 1)
          {
             menu_active_category++;
             switch_categories();

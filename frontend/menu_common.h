@@ -249,7 +249,8 @@ typedef struct
    float  alpha;
    int    zoom;
    int    active_item;
-   struct menu_item *items;
+   int    num_items;
+   menu_item *items;
 } menu_category;
 
 
