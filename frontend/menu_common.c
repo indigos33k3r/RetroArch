@@ -80,12 +80,16 @@ static rgui_handle_t *rgui_init(void)
       cat0.icon = png_texture_load("/usr/share/retroarch/settings.png", &dim, &dim);
       cat0.alpha = 1.0;
       cat0.active_item = 0;
-      cat0.num_items = 1;
+      cat0.num_items = 2;
       cat0.items = calloc(cat0.num_items, sizeof(menu_item));
-      cat0.items[0].name = "Mario";
-      cat0.items[0].icon = png_texture_load("/usr/share/retroarch/nes-cartidge.png", &dim, &dim);
-      cat0.items[0].alpha = 0.5;
-      cat0.items[0].y = VSPACING;
+      cat0.items[0].name = "Theme";
+      cat0.items[0].icon = png_texture_load("/usr/share/retroarch/setting.png", &dim, &dim);
+      cat0.items[0].alpha = 1.0;
+      cat0.items[0].y = VSPACING*1;
+      cat0.items[1].name = "Network";
+      cat0.items[1].icon = png_texture_load("/usr/share/retroarch/setting.png", &dim, &dim);
+      cat0.items[1].alpha = 0.5;
+      cat0.items[1].y = VSPACING*2;
    categories[0] = cat0;
 
    menu_category cat1;
@@ -93,6 +97,20 @@ static rgui_handle_t *rgui_init(void)
       cat1.icon = png_texture_load("/usr/share/retroarch/mastersystem.png", &dim, &dim);
       cat1.alpha = 0.5;
       cat1.active_item = 0;
+      cat1.num_items = 3;
+      cat1.items = calloc(cat0.num_items, sizeof(menu_item));
+      cat1.items[0].name = "Zool";
+      cat1.items[0].icon = png_texture_load("/usr/share/retroarch/mastersystem-cartidge.png", &dim, &dim);
+      cat1.items[0].alpha = 0;
+      cat1.items[0].y = VSPACING*1;
+      cat1.items[1].name = "Sonic Chaos";
+      cat1.items[1].icon = png_texture_load("/usr/share/retroarch/mastersystem-cartidge.png", &dim, &dim);
+      cat1.items[1].alpha = 0;
+      cat1.items[1].y = VSPACING*2;
+      cat1.items[2].name = "Wonderboy 3";
+      cat1.items[2].icon = png_texture_load("/usr/share/retroarch/mastersystem-cartidge.png", &dim, &dim);
+      cat1.items[2].alpha = 0;
+      cat1.items[2].y = VSPACING*3;
    categories[1] = cat1;
 
    menu_category cat2;
@@ -100,6 +118,20 @@ static rgui_handle_t *rgui_init(void)
       cat2.icon = png_texture_load("/usr/share/retroarch/nes.png", &dim, &dim);
       cat2.alpha = 0.5;
       cat2.active_item = 0;
+      cat2.num_items = 3;
+      cat2.items = calloc(cat0.num_items, sizeof(menu_item));
+      cat2.items[0].name = "Mario Bros.";
+      cat2.items[0].icon = png_texture_load("/usr/share/retroarch/nes-cartidge.png", &dim, &dim);
+      cat2.items[0].alpha = 0;
+      cat2.items[0].y = VSPACING*1;
+      cat2.items[1].name = "Mario Bros.";
+      cat2.items[1].icon = png_texture_load("/usr/share/retroarch/nes-cartidge.png", &dim, &dim);
+      cat2.items[1].alpha = 0;
+      cat2.items[1].y = VSPACING*2;
+      cat2.items[2].name = "Mario Bros.";
+      cat2.items[2].icon = png_texture_load("/usr/share/retroarch/nes-cartidge.png", &dim, &dim);
+      cat2.items[2].alpha = 0;
+      cat2.items[2].y = VSPACING*3;
    categories[2] = cat2;
 
    menu_category cat3;
@@ -107,6 +139,16 @@ static rgui_handle_t *rgui_init(void)
       cat3.icon = png_texture_load("/usr/share/retroarch/megadrive.png", &dim, &dim);
       cat3.alpha = 0.5;
       cat3.active_item = 0;
+      cat3.num_items = 2;
+      cat3.items = calloc(cat0.num_items, sizeof(menu_item));
+      cat3.items[0].name = "Sonic 2";
+      cat3.items[0].icon = png_texture_load("/usr/share/retroarch/megadrive-cartidge.png", &dim, &dim);
+      cat3.items[0].alpha = 0;
+      cat3.items[0].y = VSPACING*1;
+      cat3.items[1].name = "Sonic 3";
+      cat3.items[1].icon = png_texture_load("/usr/share/retroarch/megadrive-cartidge.png", &dim, &dim);
+      cat3.items[1].alpha = 0;
+      cat3.items[1].y = VSPACING*2;
    categories[3] = cat3;
 
    menu_category cat4;
@@ -164,14 +206,29 @@ void switch_categories()
 {
    add_tween(0.01, all_categories_x, -menu_active_category * HSPACING, &all_categories_x, &inOutQuad);
    
-   for(int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
+   for (int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
    {
       if (i == menu_active_category) {
          add_tween(0.01, categories[i].alpha, 1.0, &categories[i].alpha, &inOutQuad);
+         for (int j = 0; j < categories[i].num_items; j++)
+         {
+            if (j == categories[i].active_item)
+            {
+               add_tween(0.01, categories[i].items[j].alpha, 1.0, &categories[i].items[j].alpha, &inOutQuad);
+            }
+            else
+            {
+               add_tween(0.01, categories[i].items[j].alpha, 0.5, &categories[i].items[j].alpha, &inOutQuad);
+            }
+         }
       }
       else
       {
          add_tween(0.01, categories[i].alpha, 0.5, &categories[i].alpha, &inOutQuad);
+         for (int j = 0; j < categories[i].num_items; j++)
+         {
+            add_tween(0.01, categories[i].items[j].alpha, 0, &categories[i].items[j].alpha, &inOutQuad);
+         }
       }
    }
 }
@@ -190,13 +247,12 @@ void draw_background(void *data)
       gl->shader->use(GL_SHADER_STOCK_BLEND);
    gl_shader_set_coords(gl, &gl->coords, &gl->mvp_no_rot);
 
-
    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
    glDisable(GL_BLEND);
    gl->coords.color = gl->white_color_ptr;
 }
 
-void draw_category(void *data, GLuint texture, float x, float y, float alpha)
+void draw_icon(void *data, GLuint texture, float x, float y, float alpha, float rotation)
 {
    gl_t *gl = (gl_t*)data;
 
@@ -225,7 +281,14 @@ void draw_category(void *data, GLuint texture, float x, float y, float alpha)
 
    if (gl->shader)
       gl->shader->use(GL_SHADER_STOCK_BLEND);
-   gl_shader_set_coords(gl, &gl->coords, &gl->mvp_no_rot);
+
+   math_matrix mymat;
+   math_matrix rot;
+   matrix_rotate_z(&rot, rotation);
+   matrix_multiply(&mymat, &rot, &gl->mvp_no_rot);
+   //matrix_scale(&mymat, 1, 1, 1);
+
+   gl_shader_set_coords(gl, &gl->coords, &mymat);
 
    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
    glDisable(GL_BLEND);
@@ -251,12 +314,15 @@ void lakka_draw(void *data)
 
    draw_background(gl);
 
+
    for(int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
    {
-      draw_category(gl, categories[i].icon, all_categories_x + 35 + HSPACING*(i+1), 300+96, categories[i].alpha);
+      draw_icon(gl, categories[i].icon, all_categories_x + 35 + HSPACING*(i+1), 300+96, categories[i].alpha, 0);
 
-      if (categories[i].num_items)
-         draw_category(gl, categories[i].items[0].icon, 600, 600, 1);
+      for(int j = 0; j < categories[i].num_items; j++)
+      {
+         draw_icon(gl, categories[i].items[j].icon, all_categories_x + 35 + HSPACING*(i+1), 300+96 + categories[i].items[j].y, categories[i].items[j].alpha, 0);
+      }
    }
 }
 
