@@ -39,6 +39,10 @@
 #define FBHEIGHT 900
 #define HSPACING 380
 #define VSPACING 192
+#define C_ACTIVE_ZOOM 1
+#define C_PASSIVE_ZOOM 0.75
+#define I_ACTIVE_ZOOM 0.666666666
+#define I_PASSIVE_ZOOM 0.5
 
 const GLfloat background_color[] = {
    0, 200, 200, 0.75,
@@ -79,16 +83,19 @@ static rgui_handle_t *rgui_init(void)
       cat0.name = "Settings";
       cat0.icon = png_texture_load("/usr/share/retroarch/settings.png", &dim, &dim);
       cat0.alpha = 1.0;
+      cat0.zoom = C_ACTIVE_ZOOM;
       cat0.active_item = 0;
       cat0.num_items = 2;
       cat0.items = calloc(cat0.num_items, sizeof(menu_item));
       cat0.items[0].name = "Theme";
       cat0.items[0].icon = png_texture_load("/usr/share/retroarch/setting.png", &dim, &dim);
       cat0.items[0].alpha = 1.0;
+      cat0.items[0].zoom = I_ACTIVE_ZOOM;
       cat0.items[0].y = VSPACING*1;
       cat0.items[1].name = "Network";
       cat0.items[1].icon = png_texture_load("/usr/share/retroarch/setting.png", &dim, &dim);
       cat0.items[1].alpha = 0.5;
+      cat0.items[1].zoom = I_PASSIVE_ZOOM;
       cat0.items[1].y = VSPACING*2;
    categories[0] = cat0;
 
@@ -96,20 +103,24 @@ static rgui_handle_t *rgui_init(void)
       cat1.name = "MasterSystem";
       cat1.icon = png_texture_load("/usr/share/retroarch/mastersystem.png", &dim, &dim);
       cat1.alpha = 0.5;
+      cat1.zoom = C_PASSIVE_ZOOM;
       cat1.active_item = 0;
       cat1.num_items = 3;
       cat1.items = calloc(cat0.num_items, sizeof(menu_item));
       cat1.items[0].name = "Zool";
       cat1.items[0].icon = png_texture_load("/usr/share/retroarch/mastersystem-cartidge.png", &dim, &dim);
       cat1.items[0].alpha = 0;
+      cat1.items[0].zoom = I_ACTIVE_ZOOM;
       cat1.items[0].y = VSPACING*1;
       cat1.items[1].name = "Sonic Chaos";
       cat1.items[1].icon = png_texture_load("/usr/share/retroarch/mastersystem-cartidge.png", &dim, &dim);
       cat1.items[1].alpha = 0;
+      cat1.items[1].zoom = I_PASSIVE_ZOOM;
       cat1.items[1].y = VSPACING*2;
       cat1.items[2].name = "Wonderboy 3";
       cat1.items[2].icon = png_texture_load("/usr/share/retroarch/mastersystem-cartidge.png", &dim, &dim);
       cat1.items[2].alpha = 0;
+      cat1.items[2].zoom = I_PASSIVE_ZOOM;
       cat1.items[2].y = VSPACING*3;
    categories[1] = cat1;
 
@@ -117,20 +128,24 @@ static rgui_handle_t *rgui_init(void)
       cat2.name = "Nintendo Entertainment System";
       cat2.icon = png_texture_load("/usr/share/retroarch/nes.png", &dim, &dim);
       cat2.alpha = 0.5;
+      cat2.zoom = C_PASSIVE_ZOOM;
       cat2.active_item = 0;
       cat2.num_items = 3;
       cat2.items = calloc(cat0.num_items, sizeof(menu_item));
       cat2.items[0].name = "Mario Bros.";
       cat2.items[0].icon = png_texture_load("/usr/share/retroarch/nes-cartidge.png", &dim, &dim);
       cat2.items[0].alpha = 0;
+      cat2.items[0].zoom = I_ACTIVE_ZOOM;
       cat2.items[0].y = VSPACING*1;
       cat2.items[1].name = "Mario Bros.";
       cat2.items[1].icon = png_texture_load("/usr/share/retroarch/nes-cartidge.png", &dim, &dim);
       cat2.items[1].alpha = 0;
+      cat2.items[1].zoom = I_PASSIVE_ZOOM;
       cat2.items[1].y = VSPACING*2;
       cat2.items[2].name = "Mario Bros.";
       cat2.items[2].icon = png_texture_load("/usr/share/retroarch/nes-cartidge.png", &dim, &dim);
       cat2.items[2].alpha = 0;
+      cat2.items[2].zoom = I_PASSIVE_ZOOM;
       cat2.items[2].y = VSPACING*3;
    categories[2] = cat2;
 
@@ -138,16 +153,19 @@ static rgui_handle_t *rgui_init(void)
       cat3.name = "SEGA Megadrive";
       cat3.icon = png_texture_load("/usr/share/retroarch/megadrive.png", &dim, &dim);
       cat3.alpha = 0.5;
+      cat3.zoom = C_PASSIVE_ZOOM;
       cat3.active_item = 0;
       cat3.num_items = 2;
       cat3.items = calloc(cat0.num_items, sizeof(menu_item));
       cat3.items[0].name = "Sonic 2";
       cat3.items[0].icon = png_texture_load("/usr/share/retroarch/megadrive-cartidge.png", &dim, &dim);
       cat3.items[0].alpha = 0;
+      cat3.items[0].zoom = I_ACTIVE_ZOOM;
       cat3.items[0].y = VSPACING*1;
       cat3.items[1].name = "Sonic 3";
       cat3.items[1].icon = png_texture_load("/usr/share/retroarch/megadrive-cartidge.png", &dim, &dim);
       cat3.items[1].alpha = 0;
+      cat3.items[1].zoom = I_PASSIVE_ZOOM;
       cat3.items[1].y = VSPACING*2;
    categories[3] = cat3;
 
@@ -155,6 +173,7 @@ static rgui_handle_t *rgui_init(void)
       cat4.name = "Super Nintendo";
       cat4.icon = png_texture_load("/usr/share/retroarch/snes.png", &dim, &dim);
       cat4.alpha = 0.5;
+      cat4.zoom = C_PASSIVE_ZOOM;
       cat4.active_item = 0;
    categories[4] = cat4;
 
@@ -162,6 +181,7 @@ static rgui_handle_t *rgui_init(void)
       cat5.name = "PlayStation 1";
       cat5.icon = png_texture_load("/usr/share/retroarch/ps1.png", &dim, &dim);
       cat5.alpha = 0.5;
+      cat5.zoom = C_PASSIVE_ZOOM;
       cat5.active_item = 0;
    categories[5] = cat5;
 
@@ -169,6 +189,7 @@ static rgui_handle_t *rgui_init(void)
       cat6.name = "GameBoy Color";
       cat6.icon = png_texture_load("/usr/share/retroarch/gameboycolor.png", &dim, &dim);
       cat6.alpha = 0.5;
+      cat6.zoom = C_PASSIVE_ZOOM;
       cat6.active_item = 0;
    categories[6] = cat6;
 
@@ -176,6 +197,7 @@ static rgui_handle_t *rgui_init(void)
       cat7.name = "NeoGeo";
       cat7.icon = png_texture_load("/usr/share/retroarch/neogeo.png", &dim, &dim);
       cat7.alpha = 0.5;
+      cat7.zoom = C_PASSIVE_ZOOM;
       cat7.active_item = 0;
    categories[7] = cat7;
 
@@ -208,27 +230,16 @@ void switch_categories()
    
    for (int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
    {
-      if (i == menu_active_category) {
-         add_tween(0.01, categories[i].alpha, 1.0, &categories[i].alpha, &inOutQuad);
-         for (int j = 0; j < categories[i].num_items; j++)
-         {
-            if (j == categories[i].active_item)
-            {
-               add_tween(0.01, categories[i].items[j].alpha, 1.0, &categories[i].items[j].alpha, &inOutQuad);
-            }
-            else
-            {
-               add_tween(0.01, categories[i].items[j].alpha, 0.5, &categories[i].items[j].alpha, &inOutQuad);
-            }
-         }
-      }
-      else
+      float ca = (i == menu_active_category) ? 1.0 : 0.5;
+      float cz = (i == menu_active_category) ? C_ACTIVE_ZOOM : C_PASSIVE_ZOOM;
+      add_tween(0.01, categories[i].alpha, ca, &categories[i].alpha, &inOutQuad);
+      add_tween(0.01, categories[i].zoom,  cz, &categories[i].zoom,  &inOutQuad);
+
+      for (int j = 0; j < categories[i].num_items; j++)
       {
-         add_tween(0.01, categories[i].alpha, 0.5, &categories[i].alpha, &inOutQuad);
-         for (int j = 0; j < categories[i].num_items; j++)
-         {
-            add_tween(0.01, categories[i].items[j].alpha, 0, &categories[i].items[j].alpha, &inOutQuad);
-         }
+         float ia = (i != menu_active_category     ) ? 0   : 
+                    (j == categories[i].active_item) ? 1.0 : 0.5;
+         add_tween(0.01, categories[i].items[j].alpha, ia, &categories[i].items[j].alpha, &inOutQuad);
       }
    }
 }
@@ -252,7 +263,7 @@ void draw_background(void *data)
    gl->coords.color = gl->white_color_ptr;
 }
 
-void draw_icon(void *data, GLuint texture, float x, float y, float alpha, float rotation)
+void draw_icon(void *data, GLuint texture, float x, float y, float alpha, float rotation, float scale)
 {
    gl_t *gl = (gl_t*)data;
 
@@ -283,10 +294,14 @@ void draw_icon(void *data, GLuint texture, float x, float y, float alpha, float 
       gl->shader->use(GL_SHADER_STOCK_BLEND);
 
    math_matrix mymat;
-   math_matrix rot;
-   matrix_rotate_z(&rot, rotation);
-   matrix_multiply(&mymat, &rot, &gl->mvp_no_rot);
-   //matrix_scale(&mymat, 1, 1, 1);
+
+   math_matrix mrot;
+   matrix_rotate_z(&mrot, rotation);
+   matrix_multiply(&mymat, &mrot, &gl->mvp_no_rot);
+
+   math_matrix mscal;
+   matrix_scale(&mscal, scale, scale, 1);
+   matrix_multiply(&mymat, &mscal, &mymat);
 
    gl_shader_set_coords(gl, &gl->coords, &mymat);
 
@@ -317,11 +332,23 @@ void lakka_draw(void *data)
 
    for(int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
    {
-      draw_icon(gl, categories[i].icon, all_categories_x + 35 + HSPACING*(i+1), 300+96, categories[i].alpha, 0);
+      draw_icon(gl, 
+         categories[i].icon, 
+         all_categories_x + 35 + HSPACING*(i+1), 
+         300+96, 
+         categories[i].alpha, 
+         0, 
+         categories[i].zoom);
 
       for(int j = 0; j < categories[i].num_items; j++)
       {
-         draw_icon(gl, categories[i].items[j].icon, all_categories_x + 35 + HSPACING*(i+1), 300+96 + categories[i].items[j].y, categories[i].items[j].alpha, 0);
+         draw_icon(gl, 
+            categories[i].items[j].icon, 
+            all_categories_x + 35 + HSPACING*(i+1), 
+            300+96 + categories[i].items[j].y, 
+            categories[i].items[j].alpha, 
+            0, 
+            categories[i].items[j].zoom);
       }
    }
 }

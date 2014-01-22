@@ -238,7 +238,7 @@ typedef struct
    char*  name;
    GLuint icon;
    float  alpha;
-   int    zoom;
+   float  zoom;
    float  y;
 } menu_item;
 
@@ -247,7 +247,7 @@ typedef struct
    char*  name;
    GLuint icon;
    float  alpha;
-   int    zoom;
+   float  zoom;
    int    active_item;
    int    num_items;
    menu_item *items;
