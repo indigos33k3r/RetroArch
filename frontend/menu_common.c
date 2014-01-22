@@ -35,8 +35,6 @@
 
 #include "../compat/posix_string.h"
 
-#define FBWIDTH 1440
-#define FBHEIGHT 900
 #define HSPACING 380
 #define VSPACING 192
 #define C_ACTIVE_ZOOM 1
@@ -55,20 +53,13 @@ menu_category categories[8];
 
 int menu_active_category = 0;
 
-int dim = 256;
+int dim = 192;
 
 float all_categories_x = 0;
 
 rgui_handle_t *rgui;
 
-GLuint image;
-
 float timeSinceStart, oldTimeSinceStart;
-
-static double gx = 0.0;
-static double gx2 = 0.0;
-
-double v = 1.0;
 
 //forward decl
 static int menu_iterate_func(void *data, unsigned action);
@@ -224,10 +215,13 @@ int rgui_input_postprocess(void *data, uint64_t old_state)
    return ret;
 }
 
+// Move the categories left or right depending on the menu_active_category variable
 void switch_categories()
 {
+   // translation
    add_tween(0.01, all_categories_x, -menu_active_category * HSPACING, &all_categories_x, &inOutQuad);
    
+   // alpha tweening
    for (int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
    {
       float ca = (i == menu_active_category) ? 1.0 : 0.5;
@@ -267,7 +261,7 @@ void draw_icon(void *data, GLuint texture, float x, float y, float alpha, float 
 {
    gl_t *gl = (gl_t*)data;
 
-   glViewport(x, FBHEIGHT-y, 192, 192);
+   glViewport(x, gl->win_height - y, dim, dim);
 
    glEnable(GL_BLEND);
 
@@ -308,7 +302,7 @@ void draw_icon(void *data, GLuint texture, float x, float y, float alpha, float 
    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
    glDisable(GL_BLEND);
 
-   glViewport(0, 0, gl->win_width, gl->win_height);
+   glViewport(0, 0, gl->win_width, gl->win_height); // this could cause a bug
    gl->coords.vertex = gl->vertex_ptr;
    gl->coords.tex_coord = gl->tex_coords;
    gl->coords.color = gl->white_color_ptr;
@@ -316,6 +310,7 @@ void draw_icon(void *data, GLuint texture, float x, float y, float alpha, float 
 
 void lakka_draw(void *data)
 {
+   // compute delta time between two frames
    timeSinceStart = (float)clock()/CLOCKS_PER_SEC;
    float dt = timeSinceStart - oldTimeSinceStart;
    oldTimeSinceStart = timeSinceStart;
@@ -329,17 +324,9 @@ void lakka_draw(void *data)
 
    draw_background(gl);
 
-
    for(int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
    {
-      draw_icon(gl, 
-         categories[i].icon, 
-         all_categories_x + 35 + HSPACING*(i+1), 
-         300+96, 
-         categories[i].alpha, 
-         0, 
-         categories[i].zoom);
-
+      // draw items
       for(int j = 0; j < categories[i].num_items; j++)
       {
          draw_icon(gl, 
@@ -350,6 +337,15 @@ void lakka_draw(void *data)
             0, 
             categories[i].items[j].zoom);
       }
+
+      // draw category
+      draw_icon(gl, 
+         categories[i].icon, 
+         all_categories_x + 35 + HSPACING*(i+1), 
+         300+96, 
+         categories[i].alpha, 
+         0, 
+         categories[i].zoom);
    }
 }
 
