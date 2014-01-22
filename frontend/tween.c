@@ -29,13 +29,13 @@ float inOutQuad(float t, float b, float c, float d)
    return -c / 2 * ((t - 1) * (t - 3) - 1) + b;
 }
 
-void add_tween(float duration, float initial_value, float target_value, float* subject, easingFunc easing) {
+void add_tween(float duration, float target_value, float* subject, easingFunc easing) {
    numtweens++;
    tweens = realloc(tweens, numtweens * sizeof(tween));
    tweens[numtweens-1].alive = 1;
    tweens[numtweens-1].duration = duration;
    tweens[numtweens-1].running_since = 0;
-   tweens[numtweens-1].initial_value = initial_value;
+   tweens[numtweens-1].initial_value = *subject;
    tweens[numtweens-1].target_value = target_value;
    tweens[numtweens-1].subject = subject;
    tweens[numtweens-1].easing = easing;

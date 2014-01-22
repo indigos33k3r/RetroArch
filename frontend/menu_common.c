@@ -178,7 +178,7 @@ static rgui_handle_t *rgui_init(void)
 
    menu_category cat6;
       cat6.name = "GameBoy Color";
-      cat6.icon = png_texture_load("/usr/share/retroarch/gameboycolor.png", &dim, &dim);
+      cat6.icon = png_texture_load("/usr/share/retroarch/gbcolor.png", &dim, &dim);
       cat6.alpha = 0.5;
       cat6.zoom = C_PASSIVE_ZOOM;
       cat6.active_item = 0;
@@ -219,22 +219,38 @@ int rgui_input_postprocess(void *data, uint64_t old_state)
 void switch_categories()
 {
    // translation
-   add_tween(0.01, all_categories_x, -menu_active_category * HSPACING, &all_categories_x, &inOutQuad);
+   add_tween(0.01, -menu_active_category * HSPACING, &all_categories_x, &inOutQuad);
    
    // alpha tweening
    for (int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
    {
       float ca = (i == menu_active_category) ? 1.0 : 0.5;
       float cz = (i == menu_active_category) ? C_ACTIVE_ZOOM : C_PASSIVE_ZOOM;
-      add_tween(0.01, categories[i].alpha, ca, &categories[i].alpha, &inOutQuad);
-      add_tween(0.01, categories[i].zoom,  cz, &categories[i].zoom,  &inOutQuad);
+      add_tween(0.01, ca, &categories[i].alpha, &inOutQuad);
+      add_tween(0.01, cz, &categories[i].zoom,  &inOutQuad);
 
       for (int j = 0; j < categories[i].num_items; j++)
       {
          float ia = (i != menu_active_category     ) ? 0   : 
                     (j == categories[i].active_item) ? 1.0 : 0.5;
-         add_tween(0.01, categories[i].items[j].alpha, ia, &categories[i].items[j].alpha, &inOutQuad);
+         add_tween(0.01, ia, &categories[i].items[j].alpha, &inOutQuad);
       }
+   }
+}
+
+void switch_items()
+{
+   for (int j = 0; j < categories[menu_active_category].num_items; j++)
+   {
+      float ia = (j == categories[menu_active_category].active_item) ? 1.0 : 0.5;
+      float iz = (j == categories[menu_active_category].active_item) ? I_ACTIVE_ZOOM : I_PASSIVE_ZOOM;
+      float iy = (j == categories[menu_active_category].active_item) ? VSPACING :
+                 (j  < categories[menu_active_category].active_item) ? VSPACING*(j-categories[menu_active_category].active_item) :
+                                                                       VSPACING*(j-categories[menu_active_category].active_item +1);
+
+      add_tween(0.01, ia, &categories[menu_active_category].items[j].alpha, &inOutQuad);
+      add_tween(0.01, iz, &categories[menu_active_category].items[j].zoom,  &inOutQuad);
+      add_tween(0.01, iy, &categories[menu_active_category].items[j].y,     &inOutQuad);
    }
 }
 
@@ -495,6 +511,22 @@ static int menu_iterate_func(void *data, unsigned action)
          {
             menu_active_category++;
             switch_categories();
+         }
+         break;
+
+      case RGUI_ACTION_DOWN:
+         if (categories[menu_active_category].active_item < categories[menu_active_category].num_items - 1)
+         {
+            categories[menu_active_category].active_item++;
+            switch_items();
+         }
+         break;
+
+      case RGUI_ACTION_UP:
+         if (categories[menu_active_category].active_item > 0)
+         {
+            categories[menu_active_category].active_item--;
+            switch_items();
          }
          break;
 

@@ -33,5 +33,5 @@ typedef struct
 
 tween update_tween(tween, float);
 void update_tweens(float);
-void add_tween(float, float, float, float*, easingFunc);
+void add_tween(float, float, float*, easingFunc);
 void free_tweens();
