@@ -37,8 +37,8 @@
 
 #define HSPACING 300
 #define VSPACING 100
-#define C_ACTIVE_ZOOM 0.75
-#define C_PASSIVE_ZOOM 0.35
+#define C_ACTIVE_ZOOM 1.0
+#define C_PASSIVE_ZOOM 0.5
 #define I_ACTIVE_ZOOM 0.75
 #define I_PASSIVE_ZOOM 0.35
 
@@ -380,10 +380,37 @@ void draw_icon(void *data, GLuint texture, float x, float y, float alpha, float 
    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
    glDisable(GL_BLEND);
 
-   glViewport(0, 0, gl->win_width, gl->win_height); // this could cause a bug
    gl->coords.vertex = gl->vertex_ptr;
    gl->coords.tex_coord = gl->tex_coords;
    gl->coords.color = gl->white_color_ptr;
+}
+
+static void draw_text(void *data, char *msg, float x, float y, float scale, float alpha)
+{
+   gl_t *gl = (gl_t*)data;
+
+   for (int i = 0; i < 4; i++)
+   {
+      gl->font_color[4 * i + 0] = 1.0;
+      gl->font_color[4 * i + 1] = 1.0;
+      gl->font_color[4 * i + 2] = 1.0;
+      gl->font_color[4 * i + 3] = alpha;
+   }
+
+   for (int i = 0; i < 4; i++)
+   {
+      gl->font_color_dark[4 * i + 0] = 0.0;
+      gl->font_color_dark[4 * i + 1] = 0.0;
+      gl->font_color_dark[4 * i + 2] = 0.0;
+      gl->font_color_dark[4 * i + 3] = 0.0;
+   }
+
+   font_params_t ftp;
+   ftp.x = x / gl->win_width;;
+   ftp.y = (gl->win_height - y) / gl->win_height;
+   ftp.scale = scale;
+
+   gl->font_ctx->render_msg(gl, msg, &ftp);
 }
 
 void lakka_draw(void *data)
@@ -398,6 +425,7 @@ void lakka_draw(void *data)
    update_tweens(dt);
 
    gl_t *gl = (gl_t*)data;
+
    glViewport(0, 0, gl->win_width, gl->win_height);
 
    draw_background(gl);
@@ -414,6 +442,13 @@ void lakka_draw(void *data)
             categories[i].items[j].alpha, 
             0, 
             categories[i].items[j].zoom);
+
+         /*draw_text(gl, 
+            categories[i].items[j].name, 
+            all_categories_x + 25 + HSPACING*(i+1) + dim, 
+            300+96 + categories[i].items[j].y - dim/2.0, 
+            0.5, 
+            categories[i].items[j].alpha);*/
       }
 
       // draw category
@@ -425,6 +460,10 @@ void lakka_draw(void *data)
          0, 
          categories[i].zoom);
    }
+
+   draw_text(gl, categories[menu_active_category].name, 15.0, 60.0, 1.0, 1.0);
+
+   gl_set_viewport(gl, gl->win_width, gl->win_height, false, false);
 }
 
 static void menu_update_libretro_info(void)
