@@ -49,7 +49,8 @@ const GLfloat background_color[] = {
    0, 200, 200, 0.75,
 };
 
-menu_category categories[8];
+menu_category* categories = NULL;
+int num_categories = 0;
 
 int menu_active_category = 0;
 
@@ -64,13 +65,22 @@ float timeSinceStart, oldTimeSinceStart;
 //forward decl
 static int menu_iterate_func(void *data, unsigned action);
 
+void menu_init_core_info(void *data)
+{
+   rgui_handle_t *rgui = (rgui_handle_t*)data;
+   core_info_list_free(rgui->core_info);
+   rgui->core_info = NULL;
+   if (*rgui->libretro_dir)
+      rgui->core_info = core_info_list_new(rgui->libretro_dir);
+}
+
 static rgui_handle_t *rgui_init(void)
 {
    clock_t t = clock();
    timeSinceStart = ((float)t)/CLOCKS_PER_SEC;
    oldTimeSinceStart = 0;
 
-   menu_category cat0;
+   /*menu_category cat0;
       cat0.name = "Settings";
       cat0.icon = png_texture_load("/usr/share/retroarch/settings.png", &dim, &dim);
       cat0.alpha = 1.0;
@@ -252,7 +262,7 @@ static rgui_handle_t *rgui_init(void)
       cat7.alpha = 0.5;
       cat7.zoom = C_PASSIVE_ZOOM;
       cat7.active_item = 0;
-   categories[7] = cat7;
+   categories[7] = cat7;*/
 
    rgui_handle_t *rgui = (rgui_handle_t*)calloc(1, sizeof(*rgui));
 
@@ -284,7 +294,7 @@ void switch_categories()
    add_tween(0.01, -menu_active_category * HSPACING, &all_categories_x, &inOutQuad);
    
    // alpha tweening
-   for (int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
+   for (int i = 0; i < num_categories; i++)
    {
       float ca = (i == menu_active_category) ? 1.0 : 0.5;
       float cz = (i == menu_active_category) ? C_ACTIVE_ZOOM : C_PASSIVE_ZOOM;
@@ -430,7 +440,7 @@ void lakka_draw(void *data)
 
    draw_background(gl);
 
-   for(int i = 0; i < sizeof(categories) / sizeof(menu_category); i++)
+   for(int i = 0; i < num_categories; i++)
    {
       // draw items
       for(int j = 0; j < categories[i].num_items; j++)
@@ -443,12 +453,13 @@ void lakka_draw(void *data)
             0, 
             categories[i].items[j].zoom);
 
-         /*draw_text(gl, 
-            categories[i].items[j].name, 
-            all_categories_x + 25 + HSPACING*(i+1) + dim, 
-            300+96 + categories[i].items[j].y - dim/2.0, 
-            0.5, 
-            categories[i].items[j].alpha);*/
+         if (i == menu_active_category && j == categories[menu_active_category].active_item)
+            draw_text(gl, 
+               categories[i].items[j].name, 
+               all_categories_x + 25 + HSPACING*(i+1) + dim, 
+               300+96 + categories[i].items[j].y - dim/2.0, 
+               0.5, 
+               categories[i].items[j].alpha);
       }
 
       // draw category
@@ -461,7 +472,7 @@ void lakka_draw(void *data)
          categories[i].zoom);
    }
 
-   draw_text(gl, categories[menu_active_category].name, 15.0, 60.0, 1.0, 1.0);
+   //draw_text(gl, categories[menu_active_category].name, 15.0, 60.0, 1.0, 1.0);
 
    gl_set_viewport(gl, gl->win_width, gl->win_height, false, false);
 }
@@ -543,6 +554,65 @@ void menu_init(void)
 
    menu_update_libretro_info();
 
+   menu_init_core_info(rgui);
+
+   num_categories = rgui->core_info->count;
+
+   categories = realloc(categories, num_categories * sizeof(menu_category));
+
+   for (int i = 0; i < rgui->core_info->count; i++) {
+      core_info_t corenfo = rgui->core_info->list[i];
+
+      char corename[256];
+      strcpy(corename, corenfo.display_name);
+
+      for (int c = 0; c < strlen(corename); c++) 
+      {
+         if (corename[c] == 47) 
+         {
+            corename[c] = 95;
+         }
+      }
+
+      char texturepath[256];
+      strcpy(texturepath, "/usr/share/retroarch/");
+      strcat(texturepath, corename);
+      strcat(texturepath, ".png");
+
+      char cartidgetexturepath[256];
+      strcpy(cartidgetexturepath, "/usr/share/retroarch/");
+      strcat(cartidgetexturepath, corename);
+      strcat(cartidgetexturepath, "-cartidge.png");
+
+      menu_category mcat;
+      mcat.name = corenfo.display_name;
+      mcat.icon = png_texture_load(texturepath, &dim, &dim);
+      mcat.alpha = i == 0 ? 1.0 : 0.5;
+      mcat.zoom = i == 0 ? C_ACTIVE_ZOOM : C_PASSIVE_ZOOM;
+      mcat.active_item = 0;
+      mcat.num_items = 0;
+      mcat.items = calloc(mcat.num_items, sizeof(menu_item));
+      
+      struct string_list *list = dir_list_new("/home/kivutar/Jeux/roms", corenfo.supported_extensions, true);
+      dir_list_sort(list, true);
+
+      for (int j = 0; j < list->size; j++) {
+         if (! list->elems[j].attr.b) // exclude directories
+         {
+            int n = mcat.num_items;
+            mcat.num_items++;
+            mcat.items = realloc(mcat.items, mcat.num_items * sizeof(menu_item));
+
+            mcat.items[n].name  = path_basename(list->elems[j].data);
+            mcat.items[n].icon  = png_texture_load(cartidgetexturepath, &dim, &dim);
+            mcat.items[n].alpha = i != menu_active_category ? 0 : n ? 0.5 : 1;
+            mcat.items[n].zoom  = n ? I_PASSIVE_ZOOM : I_ACTIVE_ZOOM;
+            mcat.items[n].y     = n ? VSPACING*(3+n) : VSPACING*2.35;
+         }
+      }
+      categories[i] = mcat;
+   }
+
    rgui->last_time = rarch_get_time_usec();
 }
 
@@ -608,7 +678,7 @@ static int menu_iterate_func(void *data, unsigned action)
          break;
 
       case RGUI_ACTION_RIGHT:
-         if (menu_active_category < sizeof(categories)  / sizeof(menu_category) - 1)
+         if (menu_active_category < num_categories-1)
          {
             menu_active_category++;
             switch_categories();
@@ -767,11 +837,3 @@ deinit:
    return false;
 }
 
-void menu_init_core_info(void *data)
-{
-   rgui_handle_t *rgui = (rgui_handle_t*)data;
-   core_info_list_free(rgui->core_info);
-   rgui->core_info = NULL;
-   if (*rgui->libretro_dir)
-      rgui->core_info = core_info_list_new(rgui->libretro_dir);
-}
