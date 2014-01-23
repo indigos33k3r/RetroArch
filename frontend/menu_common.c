@@ -523,8 +523,6 @@ bool load_menu_game(void)
    if (rarch_main_init_wrap(&args) == 0)
    {
       RARCH_LOG("rarch_main_init_wrap() succeeded.\n");
-      // Update menu state which depends on config.
-      menu_update_libretro_info();
       return true;
    }
    else
@@ -585,13 +583,14 @@ void menu_init(void)
       strcat(cartidgetexturepath, "-cartidge.png");
 
       menu_category mcat;
-      mcat.name = corenfo.display_name;
-      mcat.icon = png_texture_load(texturepath, &dim, &dim);
-      mcat.alpha = i == 0 ? 1.0 : 0.5;
-      mcat.zoom = i == 0 ? C_ACTIVE_ZOOM : C_PASSIVE_ZOOM;
+      mcat.name        = corenfo.display_name;
+      mcat.libretro    = corenfo.path;
+      mcat.icon        = png_texture_load(texturepath, &dim, &dim);
+      mcat.alpha       = i == 0 ? 1.0 : 0.5;
+      mcat.zoom        = i == 0 ? C_ACTIVE_ZOOM : C_PASSIVE_ZOOM;
       mcat.active_item = 0;
-      mcat.num_items = 0;
-      mcat.items = calloc(mcat.num_items, sizeof(menu_item));
+      mcat.num_items   = 0;
+      mcat.items       = calloc(mcat.num_items, sizeof(menu_item));
       
       struct string_list *list = dir_list_new("/home/kivutar/Jeux/roms", corenfo.supported_extensions, true);
       dir_list_sort(list, true);
@@ -604,6 +603,7 @@ void menu_init(void)
             mcat.items = realloc(mcat.items, mcat.num_items * sizeof(menu_item));
 
             mcat.items[n].name  = path_basename(list->elems[j].data);
+            mcat.items[n].rom   = list->elems[j].data;
             mcat.items[n].icon  = png_texture_load(cartidgetexturepath, &dim, &dim);
             mcat.items[n].alpha = i != menu_active_category ? 0 : n ? 0.5 : 1;
             mcat.items[n].zoom  = n ? I_PASSIVE_ZOOM : I_ACTIVE_ZOOM;
@@ -702,19 +702,11 @@ static int menu_iterate_func(void *data, unsigned action)
          break;
 
       case RGUI_ACTION_OK:
-         if (menu_active_category == 0) {
-            strlcpy(g_extern.fullpath, "/home/kivutar/Jeux/roms/sonic3.smd", sizeof(g_extern.fullpath));
-            strlcpy(g_settings.libretro, "/usr/lib/libretro/libretro-genplus.so", sizeof(g_settings.libretro));
-            g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
-            return -1;
-         } 
-         else if (menu_active_category == 1)
-         {
-            strlcpy(g_extern.fullpath, "/storage/roms/zelda.smc", sizeof(g_extern.fullpath));
-            strlcpy(g_settings.libretro, "/usr/lib/libretro/pocketsnes-libretro.so", sizeof(g_settings.libretro));
-            g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
-            return -1;
-         }
+         strlcpy(g_extern.fullpath, categories[menu_active_category].items[categories[menu_active_category].active_item].rom, sizeof(g_extern.fullpath));
+         strlcpy(g_settings.libretro, categories[menu_active_category].libretro, sizeof(g_settings.libretro));
+         g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
+         return -1;
+
          break;
 
       default:

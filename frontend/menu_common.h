@@ -236,6 +236,7 @@ extern rgui_handle_t *rgui;
 typedef struct
 {
    char*  name;
+   char*  rom;
    GLuint icon;
    float  alpha;
    float  zoom;
@@ -245,6 +246,7 @@ typedef struct
 typedef struct
 {
    char*  name;
+   char*  libretro;
    GLuint icon;
    float  alpha;
    float  zoom;
