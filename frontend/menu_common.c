@@ -80,190 +80,6 @@ static rgui_handle_t *rgui_init(void)
    timeSinceStart = ((float)t)/CLOCKS_PER_SEC;
    oldTimeSinceStart = 0;
 
-   /*menu_category cat0;
-      cat0.name = "Settings";
-      cat0.icon = png_texture_load("/usr/share/retroarch/settings.png", &dim, &dim);
-      cat0.alpha = 1.0;
-      cat0.zoom = C_ACTIVE_ZOOM;
-      cat0.active_item = 0;
-      cat0.num_items = 2;
-      cat0.items = calloc(cat0.num_items, sizeof(menu_item));
-      cat0.items[0].name = "Theme";
-      cat0.items[0].icon = png_texture_load("/usr/share/retroarch/setting.png", &dim, &dim);
-      cat0.items[0].alpha = 1.0;
-      cat0.items[0].zoom = I_ACTIVE_ZOOM;
-      cat0.items[0].y = VSPACING*2.35;
-      cat0.items[1].name = "Network";
-      cat0.items[1].icon = png_texture_load("/usr/share/retroarch/setting.png", &dim, &dim);
-      cat0.items[1].alpha = 0.5;
-      cat0.items[1].zoom = I_PASSIVE_ZOOM;
-      cat0.items[1].y = VSPACING*4;
-   categories[0] = cat0;
-
-   menu_category cat1;
-      cat1.name = "MasterSystem";
-      cat1.icon = png_texture_load("/usr/share/retroarch/mastersystem.png", &dim, &dim);
-      cat1.alpha = 0.5;
-      cat1.zoom = C_PASSIVE_ZOOM;
-      cat1.active_item = 0;
-      cat1.num_items = 3;
-      cat1.items = calloc(cat1.num_items, sizeof(menu_item));
-      cat1.items[0].name = "Zool";
-      cat1.items[0].icon = png_texture_load("/usr/share/retroarch/mastersystem-cartidge.png", &dim, &dim);
-      cat1.items[0].alpha = 0;
-      cat1.items[0].zoom = I_ACTIVE_ZOOM;
-      cat1.items[0].y = VSPACING*2.35;
-      cat1.items[1].name = "Sonic Chaos";
-      cat1.items[1].icon = png_texture_load("/usr/share/retroarch/mastersystem-cartidge.png", &dim, &dim);
-      cat1.items[1].alpha = 0;
-      cat1.items[1].zoom = I_PASSIVE_ZOOM;
-      cat1.items[1].y = VSPACING*4;
-      cat1.items[2].name = "Wonderboy 3";
-      cat1.items[2].icon = png_texture_load("/usr/share/retroarch/mastersystem-cartidge.png", &dim, &dim);
-      cat1.items[2].alpha = 0;
-      cat1.items[2].zoom = I_PASSIVE_ZOOM;
-      cat1.items[2].y = VSPACING*5;
-   categories[1] = cat1;
-
-   menu_category cat2;
-      cat2.name = "Nintendo Entertainment System";
-      cat2.icon = png_texture_load("/usr/share/retroarch/nes.png", &dim, &dim);
-      cat2.alpha = 0.5;
-      cat2.zoom = C_PASSIVE_ZOOM;
-      cat2.active_item = 0;
-      cat2.num_items = 3;
-      cat2.items = calloc(cat2.num_items, sizeof(menu_item));
-      cat2.items[0].name = "Mario Bros.";
-      cat2.items[0].icon = png_texture_load("/usr/share/retroarch/nes-cartidge.png", &dim, &dim);
-      cat2.items[0].alpha = 0;
-      cat2.items[0].zoom = I_ACTIVE_ZOOM;
-      cat2.items[0].y = VSPACING*2.35;
-      cat2.items[1].name = "Mario Bros.";
-      cat2.items[1].icon = png_texture_load("/usr/share/retroarch/nes-cartidge.png", &dim, &dim);
-      cat2.items[1].alpha = 0;
-      cat2.items[1].zoom = I_PASSIVE_ZOOM;
-      cat2.items[1].y = VSPACING*4;
-      cat2.items[2].name = "Mario Bros.";
-      cat2.items[2].icon = png_texture_load("/usr/share/retroarch/nes-cartidge.png", &dim, &dim);
-      cat2.items[2].alpha = 0;
-      cat2.items[2].zoom = I_PASSIVE_ZOOM;
-      cat2.items[2].y = VSPACING*5;
-   categories[2] = cat2;
-
-   menu_category cat3;
-      cat3.name = "SEGA Megadrive";
-      cat3.icon = png_texture_load("/usr/share/retroarch/megadrive.png", &dim, &dim);
-      cat3.alpha = 0.5;
-      cat3.zoom = C_PASSIVE_ZOOM;
-      cat3.active_item = 0;
-      cat3.num_items = 7;
-      cat3.items = calloc(cat3.num_items, sizeof(menu_item));
-      cat3.items[0].name = "Sonic 2";
-      cat3.items[0].icon = png_texture_load("/usr/share/retroarch/megadrive-cartidge.png", &dim, &dim);
-      cat3.items[0].alpha = 0;
-      cat3.items[0].zoom = I_ACTIVE_ZOOM;
-      cat3.items[0].y = VSPACING*2.35;
-      cat3.items[1].name = "Sonic 3";
-      cat3.items[1].icon = png_texture_load("/usr/share/retroarch/megadrive-cartidge.png", &dim, &dim);
-      cat3.items[1].alpha = 0;
-      cat3.items[1].zoom = I_PASSIVE_ZOOM;
-      cat3.items[1].y = VSPACING*4;
-      cat3.items[2].name = "Sonic 4";
-      cat3.items[2].icon = png_texture_load("/usr/share/retroarch/megadrive-cartidge.png", &dim, &dim);
-      cat3.items[2].alpha = 0;
-      cat3.items[2].zoom = I_PASSIVE_ZOOM;
-      cat3.items[2].y = VSPACING*5;
-      cat3.items[3].name = "Sonic 5";
-      cat3.items[3].icon = png_texture_load("/usr/share/retroarch/megadrive-cartidge.png", &dim, &dim);
-      cat3.items[3].alpha = 0;
-      cat3.items[3].zoom = I_PASSIVE_ZOOM;
-      cat3.items[3].y = VSPACING*6;
-      cat3.items[4].name = "Sonic 6";
-      cat3.items[4].icon = png_texture_load("/usr/share/retroarch/megadrive-cartidge.png", &dim, &dim);
-      cat3.items[4].alpha = 0;
-      cat3.items[4].zoom = I_PASSIVE_ZOOM;
-      cat3.items[4].y = VSPACING*7;
-      cat3.items[5].name = "Sonic 7";
-      cat3.items[5].icon = png_texture_load("/usr/share/retroarch/megadrive-cartidge.png", &dim, &dim);
-      cat3.items[5].alpha = 0;
-      cat3.items[5].zoom = I_PASSIVE_ZOOM;
-      cat3.items[5].y = VSPACING*8;
-      cat3.items[6].name = "Sonic 8";
-      cat3.items[6].icon = png_texture_load("/usr/share/retroarch/megadrive-cartidge.png", &dim, &dim);
-      cat3.items[6].alpha = 0;
-      cat3.items[6].zoom = I_PASSIVE_ZOOM;
-      cat3.items[6].y = VSPACING*9;
-   categories[3] = cat3;
-
-   menu_category cat4;
-      cat4.name = "Super Nintendo";
-      cat4.icon = png_texture_load("/usr/share/retroarch/snes.png", &dim, &dim);
-      cat4.alpha = 0.5;
-      cat4.zoom = C_PASSIVE_ZOOM;
-      cat4.active_item = 0;
-      cat4.num_items = 7;
-      cat4.items = calloc(cat4.num_items, sizeof(menu_item));
-      cat4.items[0].name = "Sonic 2";
-      cat4.items[0].icon = png_texture_load("/usr/share/retroarch/snes-cartidge.png", &dim, &dim);
-      cat4.items[0].alpha = 0;
-      cat4.items[0].zoom = I_ACTIVE_ZOOM;
-      cat4.items[0].y = VSPACING*2.35;
-      cat4.items[1].name = "Sonic 3";
-      cat4.items[1].icon = png_texture_load("/usr/share/retroarch/snes-cartidge.png", &dim, &dim);
-      cat4.items[1].alpha = 0;
-      cat4.items[1].zoom = I_PASSIVE_ZOOM;
-      cat4.items[1].y = VSPACING*4;
-      cat4.items[2].name = "Sonic 4";
-      cat4.items[2].icon = png_texture_load("/usr/share/retroarch/snes-cartidge.png", &dim, &dim);
-      cat4.items[2].alpha = 0;
-      cat4.items[2].zoom = I_PASSIVE_ZOOM;
-      cat4.items[2].y = VSPACING*5;
-      cat4.items[3].name = "Sonic 5";
-      cat4.items[3].icon = png_texture_load("/usr/share/retroarch/snes-cartidge.png", &dim, &dim);
-      cat4.items[3].alpha = 0;
-      cat4.items[3].zoom = I_PASSIVE_ZOOM;
-      cat4.items[3].y = VSPACING*6;
-      cat4.items[4].name = "Sonic 6";
-      cat4.items[4].icon = png_texture_load("/usr/share/retroarch/snes-cartidge.png", &dim, &dim);
-      cat4.items[4].alpha = 0;
-      cat4.items[4].zoom = I_PASSIVE_ZOOM;
-      cat4.items[4].y = VSPACING*7;
-      cat4.items[5].name = "Sonic 7";
-      cat4.items[5].icon = png_texture_load("/usr/share/retroarch/snes-cartidge.png", &dim, &dim);
-      cat4.items[5].alpha = 0;
-      cat4.items[5].zoom = I_PASSIVE_ZOOM;
-      cat4.items[5].y = VSPACING*8;
-      cat4.items[6].name = "Sonic 8";
-      cat4.items[6].icon = png_texture_load("/usr/share/retroarch/snes-cartidge.png", &dim, &dim);
-      cat4.items[6].alpha = 0;
-      cat4.items[6].zoom = I_PASSIVE_ZOOM;
-      cat4.items[6].y = VSPACING*9;
-   categories[4] = cat4;
-
-   menu_category cat5;
-      cat5.name = "PlayStation 1";
-      cat5.icon = png_texture_load("/usr/share/retroarch/ps1.png", &dim, &dim);
-      cat5.alpha = 0.5;
-      cat5.zoom = C_PASSIVE_ZOOM;
-      cat5.active_item = 0;
-   categories[5] = cat5;
-
-   menu_category cat6;
-      cat6.name = "GameBoy Color";
-      cat6.icon = png_texture_load("/usr/share/retroarch/gbcolor.png", &dim, &dim);
-      cat6.alpha = 0.5;
-      cat6.zoom = C_PASSIVE_ZOOM;
-      cat6.active_item = 0;
-   categories[6] = cat6;
-
-   menu_category cat7;
-      cat7.name = "NeoGeo";
-      cat7.icon = png_texture_load("/usr/share/retroarch/neogeo.png", &dim, &dim);
-      cat7.alpha = 0.5;
-      cat7.zoom = C_PASSIVE_ZOOM;
-      cat7.active_item = 0;
-   categories[7] = cat7;*/
-
    rgui_handle_t *rgui = (rgui_handle_t*)calloc(1, sizeof(*rgui));
 
    return rgui;
@@ -457,8 +273,8 @@ void lakka_draw(void *data)
             draw_text(gl, 
                categories[i].items[j].name, 
                all_categories_x + 25 + HSPACING*(i+1) + dim, 
-               300+96 + categories[i].items[j].y - dim/2.0, 
-               0.5, 
+               300+96+20 + categories[i].items[j].y - dim/2.0, 
+               1, 
                categories[i].items[j].alpha);
       }
 
@@ -592,7 +408,7 @@ void menu_init(void)
       mcat.num_items   = 0;
       mcat.items       = calloc(mcat.num_items, sizeof(menu_item));
       
-      struct string_list *list = dir_list_new("/home/kivutar/Jeux/roms", corenfo.supported_extensions, true);
+      struct string_list *list = dir_list_new(g_settings.rgui_browser_directory, corenfo.supported_extensions, true);
       dir_list_sort(list, true);
 
       for (int j = 0; j < list->size; j++) {
