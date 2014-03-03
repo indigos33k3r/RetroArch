@@ -243,7 +243,7 @@ void lakka_draw(void *data)
 {
    // compute delta time between two frames
    timeSinceStart = (float)clock()/CLOCKS_PER_SEC;
-   float dt = timeSinceStart - oldTimeSinceStart;
+   float dt = 0.001; // timeSinceStart - oldTimeSinceStart; FIXME hardcoded dt
    oldTimeSinceStart = timeSinceStart;
 
    //printf("%f\n", 1.0/dt);

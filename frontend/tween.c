@@ -43,9 +43,14 @@ void add_tween(float duration, float target_value, float* subject, easingFunc ea
 
 void update_tweens(float dt)
 {
+   int active_tweens = 0;
    for(int i = 0; i < numtweens; i++)
    {
       tweens[i] = update_tween(tweens[i], dt);
+      active_tweens += tweens[i].running_since < tweens[i].duration ? 1 : 0;
+   }
+   if (numtweens && !active_tweens) {
+      numtweens = 0;
    }
 }
 
@@ -58,6 +63,8 @@ tween update_tween(tween tw, float dt)
          tw.initial_value,
          tw.target_value - tw.initial_value,
          tw.duration);
+   } else {
+      *(tw.subject) = tw.target_value;
    }
    return tw;
 }
