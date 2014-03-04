@@ -354,6 +354,35 @@ bool load_menu_game(void)
    }
 }
 
+char * str_replace ( const char *string, const char *substr, const char *replacement ){
+   char *tok = NULL;
+   char *newstr = NULL;
+   char *oldstr = NULL;
+   char *head = NULL;
+ 
+   /* if either substr or replacement is NULL, duplicate string a let caller handle it */
+   if ( substr == NULL || replacement == NULL ) return strdup (string);
+   newstr = strdup (string);
+   head = newstr;
+   while ( (tok = strstr ( head, substr ))){
+      oldstr = newstr;
+      newstr = malloc ( strlen ( oldstr ) - strlen ( substr ) + strlen ( replacement ) + 1 );
+      /*failed to alloc mem, free old string and return NULL */
+      if ( newstr == NULL ){
+         free (oldstr);
+         return NULL;
+      }
+      memcpy ( newstr, oldstr, tok - oldstr );
+      memcpy ( newstr + (tok - oldstr), replacement, strlen ( replacement ) );
+      memcpy ( newstr + (tok - oldstr) + strlen( replacement ), tok + strlen ( substr ), strlen ( oldstr ) - strlen ( substr ) - ( tok - oldstr ) );
+      memset ( newstr + strlen ( oldstr ) - strlen ( substr ) + strlen ( replacement ) , 0, 1 );
+      /* move back head right after the last replacement */
+      head = newstr + (tok - oldstr) + strlen( replacement );
+      free (oldstr);
+   }
+   return newstr;
+}
+
 void menu_init(void)
 {
    rgui = rgui_init();
@@ -377,26 +406,25 @@ void menu_init(void)
    for (int i = 0; i < rgui->core_info->count; i++) {
       core_info_t corenfo = rgui->core_info->list[i];
 
-      char corename[256];
-      strcpy(corename, corenfo.display_name);
-
-      for (int c = 0; c < strlen(corename); c++) 
-      {
-         if (corename[c] == 47) 
-         {
-            corename[c] = 95;
-         }
-      }
+      char core_id[256];
+      strcpy(core_id, basename(corenfo.path));
+      strcpy(core_id, str_replace(core_id, ".so", ""));
+      strcpy(core_id, str_replace(core_id, ".dll", ""));
+      strcpy(core_id, str_replace(core_id, ".dylib", ""));
+      strcpy(core_id, str_replace(core_id, "-libretro", ""));
+      strcpy(core_id, str_replace(core_id, "_libretro", ""));
+      strcpy(core_id, str_replace(core_id, "libretro-", ""));
+      strcpy(core_id, str_replace(core_id, "libretro_", ""));
 
       char texturepath[256];
       strcpy(texturepath, "/usr/share/retroarch/");
-      strcat(texturepath, corename);
+      strcat(texturepath, core_id);
       strcat(texturepath, ".png");
 
-      char cartidgetexturepath[256];
-      strcpy(cartidgetexturepath, "/usr/share/retroarch/");
-      strcat(cartidgetexturepath, corename);
-      strcat(cartidgetexturepath, "-cartidge.png");
+      char gametexturepath[256];
+      strcpy(gametexturepath, "/usr/share/retroarch/");
+      strcat(gametexturepath, core_id);
+      strcat(gametexturepath, "-game.png");
 
       menu_category mcat;
       mcat.name        = corenfo.display_name;
@@ -420,7 +448,7 @@ void menu_init(void)
 
             mcat.items[n].name  = path_basename(list->elems[j].data);
             mcat.items[n].rom   = list->elems[j].data;
-            mcat.items[n].icon  = png_texture_load(cartidgetexturepath, &dim, &dim);
+            mcat.items[n].icon  = png_texture_load(gametexturepath, &dim, &dim);
             mcat.items[n].alpha = i != menu_active_category ? 0 : n ? 0.5 : 1;
             mcat.items[n].zoom  = n ? I_PASSIVE_ZOOM : I_ACTIVE_ZOOM;
             mcat.items[n].y     = n ? VSPACING*(3+n) : VSPACING*2.35;
