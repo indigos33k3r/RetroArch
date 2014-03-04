@@ -63,8 +63,8 @@ tween update_tween(tween tw, float dt)
          tw.initial_value,
          tw.target_value - tw.initial_value,
          tw.duration);
-   } else {
-      *(tw.subject) = tw.target_value;
+      if (tw.running_since >= tw.duration)
+         *(tw.subject) = tw.target_value;
    }
    return tw;
 }
