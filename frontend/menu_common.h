@@ -28,6 +28,7 @@
 
 #include "../gfx/gl_common.h"
 #include "../gfx/gfx_common.h"
+#include "../gfx/fonts/fonts.h"
 
 #define MENU_TEXTURE_FULLSCREEN false
 
@@ -241,6 +242,7 @@ typedef struct
    float  alpha;
    float  zoom;
    float  y;
+   struct font_output_list out;
 } menu_item;
 
 typedef struct

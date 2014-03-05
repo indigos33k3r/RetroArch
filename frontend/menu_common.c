@@ -211,9 +211,177 @@ void draw_icon(void *data, GLuint texture, float x, float y, float alpha, float 
    gl->coords.color = gl->white_color_ptr;
 }
 
-static void draw_text(void *data, char *msg, float x, float y, float scale, float alpha)
+struct font_rect
+{
+   int x, y;
+   int width, height;
+   int pot_width, pot_height;
+};
+
+static void calculate_msg_geometry(const struct font_output *head, struct font_rect *rect)
+{
+   int x_min = head->off_x;
+   int x_max = head->off_x + head->width;
+   int y_min = head->off_y;
+   int y_max = head->off_y + head->height;
+
+   while ((head = head->next))
+   {
+      int left = head->off_x;
+      int right = head->off_x + head->width;
+      int bottom = head->off_y;
+      int top = head->off_y + head->height;
+
+      if (left < x_min)
+         x_min = left;
+      if (right > x_max)
+         x_max = right;
+
+      if (bottom < y_min)
+         y_min = bottom;
+      if (top > y_max)
+         y_max = top;
+   }
+
+   rect->x = x_min;
+   rect->y = y_min;
+   rect->width = x_max - x_min;
+   rect->height = y_max - y_min;
+}
+
+static void adjust_power_of_two(gl_t *gl, struct font_rect *geom)
+{
+   // Some systems really hate NPOT textures.
+   geom->pot_width  = next_pow2(geom->width);
+   geom->pot_height = next_pow2(geom->height);
+
+   if (geom->pot_width > gl->max_font_size)
+      geom->pot_width = gl->max_font_size;
+   if (geom->pot_height > gl->max_font_size)
+      geom->pot_height = gl->max_font_size;
+
+   if ((geom->pot_width > gl->font_tex_w) || (geom->pot_height > gl->font_tex_h))
+   {
+      gl->font_tex_buf = (uint32_t*)realloc(gl->font_tex_buf,
+            geom->pot_width * geom->pot_height * sizeof(uint32_t));
+
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, geom->pot_width, geom->pot_height,
+            0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+      gl->font_tex_w = geom->pot_width;
+      gl->font_tex_h = geom->pot_height;
+   }
+}
+
+
+static void copy_glyph(const struct font_output *head, const struct font_rect *geom, uint32_t *buffer, unsigned width, unsigned height)
+{
+   int h, w;
+   // head has top-left oriented coords.
+   int x = head->off_x - geom->x;
+   int y = head->off_y - geom->y;
+   y     = height - head->height - y - 1;
+
+   const uint8_t *src = head->output;
+   int font_width  = head->width  + ((x < 0) ? x : 0);
+   int font_height = head->height + ((y < 0) ? y : 0);
+
+   if (x < 0)
+   {
+      src += -x;
+      x    = 0;
+   }
+
+   if (y < 0)
+   {
+      src += -y * head->pitch;
+      y    = 0;
+   }
+
+   if (x + font_width > (int)width)
+      font_width = width - x;
+
+   if (y + font_height > (int)height)
+      font_height = height - y;
+
+   uint32_t *dst = buffer + y * width + x;
+   for (h = 0; h < font_height; h++, dst += width, src += head->pitch)
+   {
+      uint8_t *d = (uint8_t*)dst;
+      for (w = 0; w < font_width; w++)
+      {
+         *d++ = 0xff;
+         *d++ = 0xff;
+         *d++ = 0xff;
+         *d++ = src[w];
+      }
+   }
+}
+
+static void blit_fonts(gl_t *gl, const struct font_output *head, const struct font_rect *geom)
+{
+   memset(gl->font_tex_buf, 0, gl->font_tex_w * gl->font_tex_h * sizeof(uint32_t));
+
+   while (head)
+   {
+      copy_glyph(head, geom, gl->font_tex_buf, gl->font_tex_w, gl->font_tex_h);
+      head = head->next;
+   }
+
+   glPixelStorei(GL_UNPACK_ALIGNMENT, 8);
+   glTexSubImage2D(GL_TEXTURE_2D,
+      0, 0, 0, gl->font_tex_w, gl->font_tex_h,
+      GL_RGBA, GL_UNSIGNED_BYTE, gl->font_tex_buf);
+}
+
+static void calculate_font_coords(gl_t *gl,
+      GLfloat font_vertex[8], GLfloat font_vertex_dark[8], GLfloat font_tex_coords[8], GLfloat scale, GLfloat pos_x, GLfloat pos_y)
+{
+   unsigned i;
+   GLfloat scale_factor = scale;
+
+   GLfloat lx = pos_x;
+   GLfloat hx = (GLfloat)gl->font_last_width * scale_factor / gl->vp.width + lx;
+   GLfloat ly = pos_y;
+   GLfloat hy = (GLfloat)gl->font_last_height * scale_factor / gl->vp.height + ly;
+
+   font_vertex[0] = lx;
+   font_vertex[2] = hx;
+   font_vertex[4] = lx;
+   font_vertex[6] = hx;
+   font_vertex[1] = hy;
+   font_vertex[3] = hy;
+   font_vertex[5] = ly;
+   font_vertex[7] = ly;
+
+   GLfloat shift_x = 2.0f / gl->vp.width;
+   GLfloat shift_y = 2.0f / gl->vp.height;
+   for (i = 0; i < 4; i++)
+   {
+      font_vertex_dark[2 * i + 0] = font_vertex[2 * i + 0] - shift_x;
+      font_vertex_dark[2 * i + 1] = font_vertex[2 * i + 1] - shift_y;
+   }
+
+   lx = 0.0f;
+   hx = (GLfloat)gl->font_last_width / gl->font_tex_w;
+   ly = 1.0f - (GLfloat)gl->font_last_height / gl->font_tex_h; 
+   hy = 1.0f;
+
+   font_tex_coords[0] = lx;
+   font_tex_coords[2] = hx;
+   font_tex_coords[4] = lx;
+   font_tex_coords[6] = hx;
+   font_tex_coords[1] = ly;
+   font_tex_coords[3] = ly;
+   font_tex_coords[5] = hy;
+   font_tex_coords[7] = hy;
+}
+
+static void draw_text(void *data, struct font_output_list out, float x, float y, float scale, float alpha)
 {
    gl_t *gl = (gl_t*)data;
+   if (!gl->font)
+      return;
 
    for (int i = 0; i < 4; i++)
    {
@@ -223,20 +391,51 @@ static void draw_text(void *data, char *msg, float x, float y, float scale, floa
       gl->font_color[4 * i + 3] = alpha;
    }
 
-   for (int i = 0; i < 4; i++)
-   {
-      gl->font_color_dark[4 * i + 0] = 0.0;
-      gl->font_color_dark[4 * i + 1] = 0.0;
-      gl->font_color_dark[4 * i + 2] = 0.0;
-      gl->font_color_dark[4 * i + 3] = 0.0;
-   }
+   if (gl->shader)
+      gl->shader->use(GL_SHADER_STOCK_BLEND);
 
-   font_params_t ftp;
-   ftp.x = x / gl->win_width;;
-   ftp.y = (gl->win_height - y) / gl->win_height;
-   ftp.scale = scale;
+   gl_set_viewport(gl, gl->win_width, gl->win_height, true, false);
 
-   gl->font_ctx->render_msg(gl, msg, &ftp);
+   glEnable(GL_BLEND);
+
+   GLfloat font_vertex[8]; 
+   GLfloat font_vertex_dark[8]; 
+   GLfloat font_tex_coords[8];
+
+   glBindTexture(GL_TEXTURE_2D, gl->font_tex);
+
+   gl->coords.tex_coord = font_tex_coords;
+
+   struct font_output *head = out.head;
+
+   struct font_rect geom;
+   calculate_msg_geometry(head, &geom);
+   adjust_power_of_two(gl, &geom);
+   blit_fonts(gl, head, &geom);
+
+   //gl->font_driver->free_output(gl->font, &out);
+
+   gl->font_last_width = geom.width;
+   gl->font_last_height = geom.height;
+
+   calculate_font_coords(gl, font_vertex, font_vertex_dark, font_tex_coords, 
+         scale, x / gl->win_width, (gl->win_height - y) / gl->win_height);
+
+   gl->coords.vertex = font_vertex;
+   gl->coords.color  = gl->font_color;
+   gl_shader_set_coords(gl, &gl->coords, &gl->mvp);
+   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+   // Post - Go back to old rendering path.
+   gl->coords.vertex    = gl->vertex_ptr;
+   gl->coords.tex_coord = gl->tex_coords;
+   gl->coords.color     = gl->white_color_ptr;
+   glBindTexture(GL_TEXTURE_2D, gl->texture[gl->tex_index]);
+
+   glDisable(GL_BLEND);
+
+   struct gl_ortho ortho = {0, 1, 0, 1, -1, 1};
+   gl_set_projection(gl, &ortho, true);
 }
 
 void lakka_draw(void *data)
@@ -269,12 +468,13 @@ void lakka_draw(void *data)
             0, 
             categories[i].items[j].zoom);
 
-         if (i == menu_active_category && j == categories[menu_active_category].active_item)
+         //if (i == menu_active_category && j == categories[menu_active_category].active_item)
+         if (i == menu_active_category)
             draw_text(gl, 
-               categories[i].items[j].name, 
+               categories[i].items[j].out, 
                all_categories_x + 25 + HSPACING*(i+1) + dim, 
-               300+96+20 + categories[i].items[j].y - dim/2.0, 
-               1, 
+               300+96+10 + categories[i].items[j].y - dim/2.0, 
+               categories[i].items[j].zoom, 
                categories[i].items[j].alpha);
       }
 
@@ -387,6 +587,8 @@ void menu_init(void)
 {
    rgui = rgui_init();
 
+   gl_t *gl = (gl_t*)driver.video_data;
+
    strlcpy(rgui->base_path, g_settings.rgui_browser_directory, sizeof(rgui->base_path));
    rgui->menu_stack = (file_list_t*)calloc(1, sizeof(file_list_t));
    file_list_push(rgui->menu_stack, "", RGUI_SETTINGS, 0);
@@ -452,6 +654,10 @@ void menu_init(void)
             mcat.items[n].alpha = i != menu_active_category ? 0 : n ? 0.5 : 1;
             mcat.items[n].zoom  = n ? I_PASSIVE_ZOOM : I_ACTIVE_ZOOM;
             mcat.items[n].y     = n ? VSPACING*(3+n) : VSPACING*2.35;
+
+            struct font_output_list out;
+            gl->font_driver->render_msg(gl->font, mcat.items[n].name, &out);
+            mcat.items[n].out = out;
          }
       }
       categories[i] = mcat;
