@@ -36,20 +36,30 @@
 #include "../compat/posix_string.h"
 
 #define HSPACING 300
-#define VSPACING 100
+#define VSPACING 75
 #define C_ACTIVE_ZOOM 1.0
 #define C_PASSIVE_ZOOM 0.5
 #define I_ACTIVE_ZOOM 0.75
 #define I_PASSIVE_ZOOM 0.35
 
 const GLfloat background_color[] = {
-   0, 200, 200, 0.75,
-   0, 200, 200, 0.75,
-   0, 200, 200, 0.75,
-   0, 200, 200, 0.75,
+   0.1, 0.74, 0.61, 0.75,
+   0.1, 0.74, 0.61, 0.75,
+   0.1, 0.74, 0.61, 0.75,
+   0.1, 0.74, 0.61, 0.75,
 };
 
 menu_category* categories = NULL;
+
+int depth = 0;
+
+GLuint arrow_icon;
+GLuint playpause_icon;
+GLuint savestate_icon;
+GLuint loadstate_icon;
+GLuint screenshot_icon;
+GLuint reload_icon;
+
 int num_categories = 0;
 
 int menu_active_category = 0;
@@ -132,13 +142,93 @@ void switch_items()
    {
       float ia = (j == categories[menu_active_category].active_item) ? 1.0 : 0.5;
       float iz = (j == categories[menu_active_category].active_item) ? I_ACTIVE_ZOOM : I_PASSIVE_ZOOM;
-      float iy = (j == categories[menu_active_category].active_item) ? VSPACING*2.35 :
-                 (j  < categories[menu_active_category].active_item) ? VSPACING*(j-categories[menu_active_category].active_item) :
-                                                                       VSPACING*(j-categories[menu_active_category].active_item +3);
+      float iy = (j == categories[menu_active_category].active_item) ? VSPACING*2.5 :
+                 (j  < categories[menu_active_category].active_item) ? VSPACING*(j-categories[menu_active_category].active_item - 1) :
+                                                                       VSPACING*(j-categories[menu_active_category].active_item + 3);
 
       add_tween(0.01, ia, &categories[menu_active_category].items[j].alpha, &inOutQuad);
       add_tween(0.01, iz, &categories[menu_active_category].items[j].zoom,  &inOutQuad);
       add_tween(0.01, iy, &categories[menu_active_category].items[j].y,     &inOutQuad);
+   }
+}
+
+void switch_subitems ()
+{
+   menu_item ai = categories[menu_active_category].items[categories[menu_active_category].active_item];
+
+   for (int k = 0; k < ai.num_subitems; k++) {
+      // Above items
+      if (k < ai.active_subitem) {
+         add_tween(0.01, 0.5, &ai.subitems[k].alpha, &inOutQuad);
+         add_tween(0.01, VSPACING*(k-ai.active_subitem + 2), &ai.subitems[k].y, &inOutQuad);
+         add_tween(0.01, I_PASSIVE_ZOOM, &ai.subitems[k].zoom, &inOutQuad);
+      // Active item
+      } else if (k == ai.active_subitem) {
+         add_tween(0.01, 1.0, &ai.subitems[k].alpha, &inOutQuad);
+         add_tween(0.01, VSPACING*2.5, &ai.subitems[k].y, &inOutQuad);
+         add_tween(0.01, I_ACTIVE_ZOOM, &ai.subitems[k].zoom, &inOutQuad);
+      // Under items
+      } else if (k > ai.active_subitem) {
+         add_tween(0.01, 0.5, &ai.subitems[k].alpha, &inOutQuad);
+         add_tween(0.01, VSPACING*(k-ai.active_subitem + 3), &ai.subitems[k].y, &inOutQuad);
+         add_tween(0.01, I_PASSIVE_ZOOM, &ai.subitems[k].zoom, &inOutQuad);
+      }
+   }
+}
+
+void open_submenu ()
+{
+   add_tween(0.01, -HSPACING * (menu_active_category+1), &all_categories_x, &inOutQuad);
+   
+   for (int i = 0; i < num_categories; i++) {
+      if (i == menu_active_category) {
+         add_tween(0.01, 1.0, &categories[i].alpha, &inOutQuad);
+         for (int j = 0; j < categories[i].num_items; j++) {
+            if (j == categories[i].active_item) {
+               for (int k = 0; k < categories[i].items[j].num_subitems; k++) {
+                  if (k == categories[i].items[j].active_subitem) {
+                     add_tween(0.01, 1.0, &categories[i].items[j].subitems[k].alpha, &inOutQuad);
+                     add_tween(0.01, I_ACTIVE_ZOOM, &categories[i].items[j].subitems[k].zoom, &inOutQuad);
+                  } else {
+                     add_tween(0.01, 0.5, &categories[i].items[j].subitems[k].alpha, &inOutQuad);
+                     add_tween(0.01, I_PASSIVE_ZOOM, &categories[i].items[j].subitems[k].zoom, &inOutQuad);
+                  }
+               }
+            } else {
+               add_tween(0.01, 0, &categories[i].items[j].alpha, &inOutQuad);
+            }
+         }
+      } else {
+         add_tween(0.01, 0, &categories[i].alpha, &inOutQuad);
+      }
+   }
+}
+
+void close_submenu ()
+{
+   add_tween(0.01, -HSPACING * menu_active_category, &all_categories_x, &inOutQuad);
+   
+   for (int i = 0; i < num_categories; i++) {
+      if (i == menu_active_category) {
+         add_tween(0.01, 1.0, &categories[i].alpha, &inOutQuad);
+         add_tween(0.01, C_ACTIVE_ZOOM, &categories[i].zoom, &inOutQuad);
+         for (int j = 0; j < categories[i].num_items; j++) {
+            if (j == categories[i].active_item) {
+               add_tween(0.01, 1.0, &categories[i].items[j].alpha, &inOutQuad);
+               for (int k = 0; k < categories[i].items[j].num_subitems; k++) {
+                  add_tween(0.01, 0, &categories[i].items[j].subitems[k].alpha, &inOutQuad);
+               }
+            } else {
+               add_tween(0.01, 0.5, &categories[i].items[j].alpha, &inOutQuad);
+            }
+         }
+      } else {
+         add_tween(0.01, 0.5, &categories[i].alpha, &inOutQuad);
+         add_tween(0.01, C_PASSIVE_ZOOM, &categories[i].zoom, &inOutQuad);
+         for (int j = 0; j < categories[i].num_items; j++) {
+            add_tween(0.01, 0, &categories[i].items[j].alpha, &inOutQuad);
+         }
+      }
    }
 }
 
@@ -221,7 +311,7 @@ struct font_rect
 static void calculate_msg_geometry(const struct font_output *head, struct font_rect *rect)
 {
    int x_min = head->off_x;
-   int x_max = head->off_x + head->width;
+   int x_max = head->off_x + head->width+10;
    int y_min = head->off_y;
    int y_max = head->off_y + head->height;
 
@@ -462,33 +552,72 @@ void lakka_draw(void *data)
       {
          draw_icon(gl, 
             categories[i].items[j].icon, 
-            all_categories_x + 25 + HSPACING*(i+1), 
-            300+96 + categories[i].items[j].y, 
+            156 + HSPACING*(i+1) + all_categories_x - dim/2.0, 
+            300 + categories[i].items[j].y + dim/2.0, 
             categories[i].items[j].alpha, 
             0, 
             categories[i].items[j].zoom);
 
-         //if (i == menu_active_category && j == categories[menu_active_category].active_item)
-         if (i == menu_active_category)
-            draw_text(gl, 
-               categories[i].items[j].out, 
-               all_categories_x + 25 + HSPACING*(i+1) + dim, 
-               300+96+10 + categories[i].items[j].y - dim/2.0, 
-               categories[i].items[j].zoom, 
-               categories[i].items[j].alpha);
+         if (i == menu_active_category && j == categories[i].active_item && depth == 1) // performance improvement
+         {
+            for(int k = 0; k < categories[i].items[j].num_subitems; k++)
+            {
+               draw_icon(gl, 
+                  categories[i].items[j].subitems[k].icon, 
+                  156 + HSPACING*(i+2) + all_categories_x - dim/2.0, 
+                  300 + categories[i].items[j].subitems[k].y + dim/2.0, 
+                  categories[i].items[j].subitems[k].alpha, 
+                  0, 
+                  categories[i].items[j].subitems[k].zoom);
+               /*if category.prefix ~= "settings" and  (k == 2 or k == 3) and item.slot == -1 then
+                  love.graphics.print(subitem.name .. " <" .. item.slot .. " (auto)>", 256 + (HSPACING*(i+1)) + all_categories.x, 300-15 + subitem.y)
+               elseif category.prefix ~= "settings" and  (k == 2 or k == 3) then
+                  love.graphics.print(subitem.name .. " <" .. item.slot .. ">", 256 + (HSPACING*(i+1)) + all_categories.x, 300-15 + subitem.y)
+               else*/
+                  draw_text(gl, 
+                     categories[i].items[j].subitems[k].out, 
+                     156 + HSPACING*(i+2) + all_categories_x + dim/2.0, 
+                     300 + categories[i].items[j].subitems[k].y + 15, 
+                     categories[i].items[j].subitems[k].zoom, 
+                     categories[i].items[j].subitems[k].alpha);
+               /*end*/
+            }
+         }
+
+         if (depth == 0) {
+            if (i == menu_active_category && j > categories[menu_active_category].active_item - 4 && j < categories[menu_active_category].active_item + 10) // performance improvement
+               draw_text(gl, 
+                  categories[i].items[j].out, 
+                  156 + HSPACING*(i+1) + all_categories_x + dim/2.0, 
+                  300 + categories[i].items[j].y + 15, 
+                  categories[i].items[j].zoom, 
+                  categories[i].items[j].alpha);
+         } else {
+            draw_icon(gl,
+               arrow_icon, 
+               156 + (HSPACING*(i+1)) + all_categories_x + 150 +-dim/2.0, 
+               300 + categories[i].items[j].y + dim/2.0, 
+               categories[i].items[j].alpha,
+               0,
+               categories[i].items[j].zoom);
+         }
       }
 
       // draw category
       draw_icon(gl, 
          categories[i].icon, 
-         all_categories_x + 25 + HSPACING*(i+1), 
-         300+96+45, 
+         156 + (HSPACING*(i+1)) + all_categories_x - dim/2.0, 
+         300 + dim/2.0, 
          categories[i].alpha, 
          0, 
          categories[i].zoom);
    }
 
-   //draw_text(gl, categories[menu_active_category].name, 15.0, 60.0, 1.0, 1.0);
+   if (depth == 0) {
+      draw_text(gl, categories[menu_active_category].out, 15.0, 35.0, 0.5, 1.0);
+   } else {
+      draw_text(gl, categories[menu_active_category].items[categories[menu_active_category].active_item].out, 15.0, 35.0, 0.5, 1.0);
+   }
 
    gl_set_viewport(gl, gl->win_width, gl->win_height, false, false);
 }
@@ -603,6 +732,13 @@ void menu_init(void)
 
    num_categories = rgui->core_info->count;
 
+   arrow_icon = png_texture_load("/usr/share/retroarch/arrow.png", &dim, &dim);
+   playpause_icon = png_texture_load("/usr/share/retroarch/play-pause.png", &dim, &dim);
+   savestate_icon = png_texture_load("/usr/share/retroarch/savestate.png", &dim, &dim);
+   loadstate_icon = png_texture_load("/usr/share/retroarch/loadstate.png", &dim, &dim);
+   screenshot_icon = png_texture_load("/usr/share/retroarch/screenshot.png", &dim, &dim);
+   reload_icon = png_texture_load("/usr/share/retroarch/reload.png", &dim, &dim);
+
    categories = realloc(categories, num_categories * sizeof(menu_category));
 
    for (int i = 0; i < rgui->core_info->count; i++) {
@@ -637,6 +773,9 @@ void menu_init(void)
       mcat.active_item = 0;
       mcat.num_items   = 0;
       mcat.items       = calloc(mcat.num_items, sizeof(menu_item));
+      struct font_output_list out;
+      gl->font_driver->render_msg(gl->font, mcat.name, &out);
+      mcat.out = out;
       
       struct string_list *list = dir_list_new(g_settings.rgui_browser_directory, corenfo.supported_extensions, true);
       dir_list_sort(list, true);
@@ -653,7 +792,41 @@ void menu_init(void)
             mcat.items[n].icon  = png_texture_load(gametexturepath, &dim, &dim);
             mcat.items[n].alpha = i != menu_active_category ? 0 : n ? 0.5 : 1;
             mcat.items[n].zoom  = n ? I_PASSIVE_ZOOM : I_ACTIVE_ZOOM;
-            mcat.items[n].y     = n ? VSPACING*(3+n) : VSPACING*2.35;
+            mcat.items[n].y     = n ? VSPACING*(3+n) : VSPACING*2.5;
+            mcat.items[n].active_subitem = 0;
+            mcat.items[n].num_subitems   = 5;
+            mcat.items[n].subitems       = calloc(mcat.items[n].num_subitems, sizeof(menu_subitem));
+
+            for (int k = 0; k < mcat.items[n].num_subitems; k++) {
+               switch (k) {
+                  case 0:
+                     mcat.items[n].subitems[k].name = "Run/Resume Content";
+                     mcat.items[n].subitems[k].icon = playpause_icon;
+                     break;
+                  case 1:
+                     mcat.items[n].subitems[k].name = "Load State";
+                     mcat.items[n].subitems[k].icon = loadstate_icon;
+                     break;
+                  case 2:
+                     mcat.items[n].subitems[k].name = "Save State";
+                     mcat.items[n].subitems[k].icon = savestate_icon;
+                     break;
+                  case 3:
+                     mcat.items[n].subitems[k].name = "Take Screenshot";
+                     mcat.items[n].subitems[k].icon = screenshot_icon;
+                     break;
+                  case 4:
+                     mcat.items[n].subitems[k].name = "Reload Content";
+                     mcat.items[n].subitems[k].icon = reload_icon;
+                     break;
+               }
+               mcat.items[n].subitems[k].alpha = 0;
+               mcat.items[n].subitems[k].zoom = k == mcat.items[n].active_subitem ? I_ACTIVE_ZOOM : I_PASSIVE_ZOOM;
+               mcat.items[n].subitems[k].y = k == 0 ? VSPACING*2.5 : VSPACING*(3+k);
+               struct font_output_list out;
+               gl->font_driver->render_msg(gl->font, mcat.items[n].subitems[k].name, &out);
+               mcat.items[n].subitems[k].out = out;
+            }
 
             struct font_output_list out;
             gl->font_driver->render_msg(gl->font, mcat.items[n].name, &out);
@@ -720,7 +893,7 @@ static int menu_iterate_func(void *data, unsigned action)
    switch (action)
    {
       case RGUI_ACTION_LEFT:
-         if (menu_active_category > 0)
+         if (depth == 0 && menu_active_category > 0)
          {
             menu_active_category--;
             switch_categories();
@@ -728,7 +901,7 @@ static int menu_iterate_func(void *data, unsigned action)
          break;
 
       case RGUI_ACTION_RIGHT:
-         if (menu_active_category < num_categories-1)
+         if (depth == 0 && menu_active_category < num_categories-1)
          {
             menu_active_category++;
             switch_categories();
@@ -736,26 +909,50 @@ static int menu_iterate_func(void *data, unsigned action)
          break;
 
       case RGUI_ACTION_DOWN:
-         if (categories[menu_active_category].active_item < categories[menu_active_category].num_items - 1)
+         if (depth == 0 && categories[menu_active_category].active_item < categories[menu_active_category].num_items - 1)
          {
             categories[menu_active_category].active_item++;
             switch_items();
          }
+         if (depth == 1 && categories[menu_active_category].items[categories[menu_active_category].active_item].active_subitem < categories[menu_active_category].items[categories[menu_active_category].active_item].num_subitems -1)
+         {
+            categories[menu_active_category].items[categories[menu_active_category].active_item].active_subitem++;
+            switch_subitems();
+         }
          break;
 
       case RGUI_ACTION_UP:
-         if (categories[menu_active_category].active_item > 0)
+         if (depth == 0 && categories[menu_active_category].active_item > 0)
          {
             categories[menu_active_category].active_item--;
             switch_items();
          }
+         if (depth == 1 && categories[menu_active_category].items[categories[menu_active_category].active_item].active_subitem > 0)
+         {
+            categories[menu_active_category].items[categories[menu_active_category].active_item].active_subitem--;
+            switch_subitems();
+         }
          break;
 
       case RGUI_ACTION_OK:
-         strlcpy(g_extern.fullpath, categories[menu_active_category].items[categories[menu_active_category].active_item].rom, sizeof(g_extern.fullpath));
-         strlcpy(g_settings.libretro, categories[menu_active_category].libretro, sizeof(g_settings.libretro));
-         g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
-         return -1;
+         if (depth == 1 && categories[menu_active_category].items[categories[menu_active_category].active_item].active_subitem == 0) {
+            strlcpy(g_extern.fullpath, categories[menu_active_category].items[categories[menu_active_category].active_item].rom, sizeof(g_extern.fullpath));
+            strlcpy(g_settings.libretro, categories[menu_active_category].libretro, sizeof(g_settings.libretro));
+            g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
+            return -1;
+         }
+         if (depth == 0) {
+            
+            open_submenu();
+            depth = 1;
+         }
+         break;
+
+      case RGUI_ACTION_CANCEL:
+         if (depth == 1) {
+            close_submenu();
+            depth = 0;
+         }
 
          break;
 
