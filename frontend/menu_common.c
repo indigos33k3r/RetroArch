@@ -613,11 +613,8 @@ void lakka_draw(void *data)
          categories[i].zoom);
    }
 
-   if (depth == 0) {
-      draw_text(gl, categories[menu_active_category].out, 15.0, 35.0, 0.5, 1.0);
-   } else {
-      draw_text(gl, categories[menu_active_category].items[categories[menu_active_category].active_item].out, 15.0, 35.0, 0.5, 1.0);
-   }
+   struct font_output_list msg = (depth == 0) ? categories[menu_active_category].out : categories[menu_active_category].items[categories[menu_active_category].active_item].out;
+   draw_text(gl, msg, 15.0, 35.0, 0.5, 1.0);
 
    gl_set_viewport(gl, gl->win_width, gl->win_height, false, false);
 }
@@ -804,12 +801,12 @@ void menu_init(void)
                      mcat.items[n].subitems[k].icon = playpause_icon;
                      break;
                   case 1:
-                     mcat.items[n].subitems[k].name = "Load State";
-                     mcat.items[n].subitems[k].icon = loadstate_icon;
-                     break;
-                  case 2:
                      mcat.items[n].subitems[k].name = "Save State";
                      mcat.items[n].subitems[k].icon = savestate_icon;
+                     break;
+                  case 2:
+                     mcat.items[n].subitems[k].name = "Load State";
+                     mcat.items[n].subitems[k].icon = loadstate_icon;
                      break;
                   case 3:
                      mcat.items[n].subitems[k].name = "Take Screenshot";
@@ -935,14 +932,34 @@ static int menu_iterate_func(void *data, unsigned action)
          break;
 
       case RGUI_ACTION_OK:
-         if (depth == 1 && categories[menu_active_category].items[categories[menu_active_category].active_item].active_subitem == 0) {
-            strlcpy(g_extern.fullpath, categories[menu_active_category].items[categories[menu_active_category].active_item].rom, sizeof(g_extern.fullpath));
-            strlcpy(g_settings.libretro, categories[menu_active_category].libretro, sizeof(g_settings.libretro));
-            g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
-            return -1;
-         }
-         if (depth == 0) {
-            
+         if (depth == 1) {
+            switch (categories[menu_active_category].items[categories[menu_active_category].active_item].active_subitem) {
+               case 0:
+                  strlcpy(g_extern.fullpath, categories[menu_active_category].items[categories[menu_active_category].active_item].rom, sizeof(g_extern.fullpath));
+                  strlcpy(g_settings.libretro, categories[menu_active_category].libretro, sizeof(g_settings.libretro));
+                  g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
+                  return -1;
+                  break;
+               case 1:
+                  rarch_save_state();
+                  g_extern.lifecycle_state |= (1ULL << MODE_GAME);
+                  return -1;
+                  break;
+               case 2:
+                  rarch_load_state();
+                  g_extern.lifecycle_state |= (1ULL << MODE_GAME);
+                  return -1;
+                  break;
+               case 3:
+                  rarch_take_screenshot();
+                  break;
+               case 4:
+                  rarch_game_reset();
+                  g_extern.lifecycle_state |= (1ULL << MODE_GAME);
+                  return -1;
+                  break;
+            }
+         } else if (depth == 0) {
             open_submenu();
             depth = 1;
          }
