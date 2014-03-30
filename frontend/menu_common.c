@@ -54,11 +54,15 @@ menu_category* categories = NULL;
 int depth = 0;
 
 GLuint arrow_icon;
-GLuint playpause_icon;
+GLuint run_icon;
+GLuint resume_icon;
 GLuint savestate_icon;
 GLuint loadstate_icon;
 GLuint screenshot_icon;
 GLuint reload_icon;
+
+struct font_output_list run_label;
+struct font_output_list resume_label;
 
 int num_categories = 0;
 
@@ -179,6 +183,20 @@ void switch_subitems ()
 void open_submenu ()
 {
    add_tween(0.01, -HSPACING * (menu_active_category+1), &all_categories_x, &inOutQuad);
+
+   // Reset contextual menu style
+   if (! (g_extern.main_is_init && !g_extern.libretro_dummy && strcmp(g_extern.fullpath, categories[menu_active_category].items[categories[menu_active_category].active_item].rom) == 0)) { // Keeps active submenu state (do we really want that?)
+      categories[menu_active_category].items[categories[menu_active_category].active_item].active_subitem = 0;
+      for (int i = 0; i < num_categories; i++) {
+         for (int j = 0; j < categories[i].num_items; j++) {
+            for (int k = 0; k < categories[i].items[j].num_subitems; k++) {
+               categories[i].items[j].subitems[k].alpha = 0;
+               categories[i].items[j].subitems[k].zoom = k == categories[i].items[j].active_subitem ? I_ACTIVE_ZOOM : I_PASSIVE_ZOOM;
+               categories[i].items[j].subitems[k].y = k == 0 ? VSPACING*2.5 : VSPACING*(3+k);
+            }
+         }
+      }
+   }
    
    for (int i = 0; i < num_categories; i++) {
       if (i == menu_active_category) {
@@ -562,6 +580,39 @@ void lakka_draw(void *data)
          {
             for(int k = 0; k < categories[i].items[j].num_subitems; k++)
             {
+               if (k == 0 && g_extern.main_is_init && !g_extern.libretro_dummy && strcmp(g_extern.fullpath, categories[menu_active_category].items[categories[menu_active_category].active_item].rom) == 0)
+               {
+                  draw_icon(gl, 
+                     resume_icon, 
+                     156 + HSPACING*(i+2) + all_categories_x - dim/2.0, 
+                     300 + categories[i].items[j].subitems[k].y + dim/2.0, 
+                     categories[i].items[j].subitems[k].alpha, 
+                     0, 
+                     categories[i].items[j].subitems[k].zoom);
+                  draw_text(gl, 
+                     resume_label, 
+                     156 + HSPACING*(i+2) + all_categories_x + dim/2.0, 
+                     300 + categories[i].items[j].subitems[k].y + 15, 
+                     categories[i].items[j].subitems[k].zoom, 
+                     categories[i].items[j].subitems[k].alpha);
+               }
+               else if (k == 0)
+               {
+                  draw_icon(gl, 
+                     run_icon, 
+                     156 + HSPACING*(i+2) + all_categories_x - dim/2.0, 
+                     300 + categories[i].items[j].subitems[k].y + dim/2.0, 
+                     categories[i].items[j].subitems[k].alpha, 
+                     0, 
+                     categories[i].items[j].subitems[k].zoom);
+                  draw_text(gl, 
+                     run_label, 
+                     156 + HSPACING*(i+2) + all_categories_x + dim/2.0, 
+                     300 + categories[i].items[j].subitems[k].y + 15, 
+                     categories[i].items[j].subitems[k].zoom, 
+                     categories[i].items[j].subitems[k].alpha);
+               } else if (g_extern.main_is_init && !g_extern.libretro_dummy && strcmp(g_extern.fullpath, categories[menu_active_category].items[categories[menu_active_category].active_item].rom) == 0)
+               {
                draw_icon(gl, 
                   categories[i].items[j].subitems[k].icon, 
                   156 + HSPACING*(i+2) + all_categories_x - dim/2.0, 
@@ -581,6 +632,7 @@ void lakka_draw(void *data)
                      categories[i].items[j].subitems[k].zoom, 
                      categories[i].items[j].subitems[k].alpha);
                /*end*/
+               }
             }
          }
 
@@ -730,11 +782,15 @@ void menu_init(void)
    num_categories = rgui->core_info->count;
 
    arrow_icon = png_texture_load("/usr/share/retroarch/arrow.png", &dim, &dim);
-   playpause_icon = png_texture_load("/usr/share/retroarch/play-pause.png", &dim, &dim);
+   run_icon = png_texture_load("/usr/share/retroarch/run.png", &dim, &dim);
+   resume_icon = png_texture_load("/usr/share/retroarch/resume.png", &dim, &dim);
    savestate_icon = png_texture_load("/usr/share/retroarch/savestate.png", &dim, &dim);
    loadstate_icon = png_texture_load("/usr/share/retroarch/loadstate.png", &dim, &dim);
    screenshot_icon = png_texture_load("/usr/share/retroarch/screenshot.png", &dim, &dim);
    reload_icon = png_texture_load("/usr/share/retroarch/reload.png", &dim, &dim);
+
+   gl->font_driver->render_msg(gl->font, "Run", &run_label);
+   gl->font_driver->render_msg(gl->font, "Resume", &resume_label);
 
    categories = realloc(categories, num_categories * sizeof(menu_category));
 
@@ -797,8 +853,8 @@ void menu_init(void)
             for (int k = 0; k < mcat.items[n].num_subitems; k++) {
                switch (k) {
                   case 0:
-                     mcat.items[n].subitems[k].name = "Run/Resume Content";
-                     mcat.items[n].subitems[k].icon = playpause_icon;
+                     mcat.items[n].subitems[k].name = "Run";
+                     mcat.items[n].subitems[k].icon = run_icon;
                      break;
                   case 1:
                      mcat.items[n].subitems[k].name = "Save State";
@@ -813,7 +869,7 @@ void menu_init(void)
                      mcat.items[n].subitems[k].icon = screenshot_icon;
                      break;
                   case 4:
-                     mcat.items[n].subitems[k].name = "Reload Content";
+                     mcat.items[n].subitems[k].name = "Reload";
                      mcat.items[n].subitems[k].icon = reload_icon;
                      break;
                }
@@ -911,7 +967,7 @@ static int menu_iterate_func(void *data, unsigned action)
             categories[menu_active_category].active_item++;
             switch_items();
          }
-         if (depth == 1 && categories[menu_active_category].items[categories[menu_active_category].active_item].active_subitem < categories[menu_active_category].items[categories[menu_active_category].active_item].num_subitems -1)
+         if (depth == 1 && categories[menu_active_category].items[categories[menu_active_category].active_item].active_subitem < categories[menu_active_category].items[categories[menu_active_category].active_item].num_subitems -1 && g_extern.main_is_init && !g_extern.libretro_dummy && strcmp(g_extern.fullpath, categories[menu_active_category].items[categories[menu_active_category].active_item].rom) == 0)
          {
             categories[menu_active_category].items[categories[menu_active_category].active_item].active_subitem++;
             switch_subitems();
@@ -935,9 +991,13 @@ static int menu_iterate_func(void *data, unsigned action)
          if (depth == 1) {
             switch (categories[menu_active_category].items[categories[menu_active_category].active_item].active_subitem) {
                case 0:
-                  strlcpy(g_extern.fullpath, categories[menu_active_category].items[categories[menu_active_category].active_item].rom, sizeof(g_extern.fullpath));
-                  strlcpy(g_settings.libretro, categories[menu_active_category].libretro, sizeof(g_settings.libretro));
-                  g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
+                  if (g_extern.main_is_init && !g_extern.libretro_dummy && strcmp(g_extern.fullpath, categories[menu_active_category].items[categories[menu_active_category].active_item].rom) == 0) {
+                     g_extern.lifecycle_state |= (1ULL << MODE_GAME);
+                  } else {
+                     strlcpy(g_extern.fullpath, categories[menu_active_category].items[categories[menu_active_category].active_item].rom, sizeof(g_extern.fullpath));
+                     strlcpy(g_settings.libretro, categories[menu_active_category].libretro, sizeof(g_settings.libretro));
+                     g_extern.lifecycle_state |= (1ULL << MODE_LOAD_GAME);
+                  }
                   return -1;
                   break;
                case 1:
