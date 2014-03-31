@@ -41,6 +41,7 @@
 #define C_PASSIVE_ZOOM 0.5
 #define I_ACTIVE_ZOOM 0.75
 #define I_PASSIVE_ZOOM 0.35
+#define DELAY 0.075
 
 const GLfloat background_color[] = {
    0.1, 0.74, 0.61, 0.75,
@@ -121,21 +122,21 @@ int rgui_input_postprocess(void *data, uint64_t old_state)
 void switch_categories()
 {
    // translation
-   add_tween(0.01, -menu_active_category * HSPACING, &all_categories_x, &inOutQuad);
+   add_tween(DELAY, -menu_active_category * HSPACING, &all_categories_x, &inOutQuad);
    
    // alpha tweening
    for (int i = 0; i < num_categories; i++)
    {
       float ca = (i == menu_active_category) ? 1.0 : 0.5;
       float cz = (i == menu_active_category) ? C_ACTIVE_ZOOM : C_PASSIVE_ZOOM;
-      add_tween(0.01, ca, &categories[i].alpha, &inOutQuad);
-      add_tween(0.01, cz, &categories[i].zoom,  &inOutQuad);
+      add_tween(DELAY, ca, &categories[i].alpha, &inOutQuad);
+      add_tween(DELAY, cz, &categories[i].zoom,  &inOutQuad);
 
       for (int j = 0; j < categories[i].num_items; j++)
       {
          float ia = (i != menu_active_category     ) ? 0   : 
                     (j == categories[i].active_item) ? 1.0 : 0.5;
-         add_tween(0.01, ia, &categories[i].items[j].alpha, &inOutQuad);
+         add_tween(DELAY, ia, &categories[i].items[j].alpha, &inOutQuad);
       }
    }
 }
@@ -150,9 +151,9 @@ void switch_items()
                  (j  < categories[menu_active_category].active_item) ? VSPACING*(j-categories[menu_active_category].active_item - 1) :
                                                                        VSPACING*(j-categories[menu_active_category].active_item + 3);
 
-      add_tween(0.01, ia, &categories[menu_active_category].items[j].alpha, &inOutQuad);
-      add_tween(0.01, iz, &categories[menu_active_category].items[j].zoom,  &inOutQuad);
-      add_tween(0.01, iy, &categories[menu_active_category].items[j].y,     &inOutQuad);
+      add_tween(DELAY, ia, &categories[menu_active_category].items[j].alpha, &inOutQuad);
+      add_tween(DELAY, iz, &categories[menu_active_category].items[j].zoom,  &inOutQuad);
+      add_tween(DELAY, iy, &categories[menu_active_category].items[j].y,     &inOutQuad);
    }
 }
 
@@ -163,28 +164,25 @@ void switch_subitems ()
    for (int k = 0; k < ai.num_subitems; k++) {
       // Above items
       if (k < ai.active_subitem) {
-         add_tween(0.01, 0.5, &ai.subitems[k].alpha, &inOutQuad);
-         add_tween(0.01, VSPACING*(k-ai.active_subitem + 2), &ai.subitems[k].y, &inOutQuad);
-         add_tween(0.01, I_PASSIVE_ZOOM, &ai.subitems[k].zoom, &inOutQuad);
+         add_tween(DELAY, 0.5, &ai.subitems[k].alpha, &inOutQuad);
+         add_tween(DELAY, VSPACING*(k-ai.active_subitem + 2), &ai.subitems[k].y, &inOutQuad);
+         add_tween(DELAY, I_PASSIVE_ZOOM, &ai.subitems[k].zoom, &inOutQuad);
       // Active item
       } else if (k == ai.active_subitem) {
-         add_tween(0.01, 1.0, &ai.subitems[k].alpha, &inOutQuad);
-         add_tween(0.01, VSPACING*2.5, &ai.subitems[k].y, &inOutQuad);
-         add_tween(0.01, I_ACTIVE_ZOOM, &ai.subitems[k].zoom, &inOutQuad);
+         add_tween(DELAY, 1.0, &ai.subitems[k].alpha, &inOutQuad);
+         add_tween(DELAY, VSPACING*2.5, &ai.subitems[k].y, &inOutQuad);
+         add_tween(DELAY, I_ACTIVE_ZOOM, &ai.subitems[k].zoom, &inOutQuad);
       // Under items
       } else if (k > ai.active_subitem) {
-         add_tween(0.01, 0.5, &ai.subitems[k].alpha, &inOutQuad);
-         add_tween(0.01, VSPACING*(k-ai.active_subitem + 3), &ai.subitems[k].y, &inOutQuad);
-         add_tween(0.01, I_PASSIVE_ZOOM, &ai.subitems[k].zoom, &inOutQuad);
+         add_tween(DELAY, 0.5, &ai.subitems[k].alpha, &inOutQuad);
+         add_tween(DELAY, VSPACING*(k-ai.active_subitem + 3), &ai.subitems[k].y, &inOutQuad);
+         add_tween(DELAY, I_PASSIVE_ZOOM, &ai.subitems[k].zoom, &inOutQuad);
       }
    }
 }
 
-void open_submenu ()
+void reset_submenu()
 {
-   add_tween(0.01, -HSPACING * (menu_active_category+1), &all_categories_x, &inOutQuad);
-
-   // Reset contextual menu style
    if (! (g_extern.main_is_init && !g_extern.libretro_dummy && strcmp(g_extern.fullpath, categories[menu_active_category].items[categories[menu_active_category].active_item].rom) == 0)) { // Keeps active submenu state (do we really want that?)
       categories[menu_active_category].items[categories[menu_active_category].active_item].active_subitem = 0;
       for (int i = 0; i < num_categories; i++) {
@@ -197,54 +195,62 @@ void open_submenu ()
          }
       }
    }
+}
+
+void open_submenu ()
+{
+   add_tween(DELAY, -HSPACING * (menu_active_category+1), &all_categories_x, &inOutQuad);
+
+   // Reset contextual menu style
+   reset_submenu();
    
    for (int i = 0; i < num_categories; i++) {
       if (i == menu_active_category) {
-         add_tween(0.01, 1.0, &categories[i].alpha, &inOutQuad);
+         add_tween(DELAY, 1.0, &categories[i].alpha, &inOutQuad);
          for (int j = 0; j < categories[i].num_items; j++) {
             if (j == categories[i].active_item) {
                for (int k = 0; k < categories[i].items[j].num_subitems; k++) {
                   if (k == categories[i].items[j].active_subitem) {
-                     add_tween(0.01, 1.0, &categories[i].items[j].subitems[k].alpha, &inOutQuad);
-                     add_tween(0.01, I_ACTIVE_ZOOM, &categories[i].items[j].subitems[k].zoom, &inOutQuad);
+                     add_tween(DELAY, 1.0, &categories[i].items[j].subitems[k].alpha, &inOutQuad);
+                     add_tween(DELAY, I_ACTIVE_ZOOM, &categories[i].items[j].subitems[k].zoom, &inOutQuad);
                   } else {
-                     add_tween(0.01, 0.5, &categories[i].items[j].subitems[k].alpha, &inOutQuad);
-                     add_tween(0.01, I_PASSIVE_ZOOM, &categories[i].items[j].subitems[k].zoom, &inOutQuad);
+                     add_tween(DELAY, 0.5, &categories[i].items[j].subitems[k].alpha, &inOutQuad);
+                     add_tween(DELAY, I_PASSIVE_ZOOM, &categories[i].items[j].subitems[k].zoom, &inOutQuad);
                   }
                }
             } else {
-               add_tween(0.01, 0, &categories[i].items[j].alpha, &inOutQuad);
+               add_tween(DELAY, 0, &categories[i].items[j].alpha, &inOutQuad);
             }
          }
       } else {
-         add_tween(0.01, 0, &categories[i].alpha, &inOutQuad);
+         add_tween(DELAY, 0, &categories[i].alpha, &inOutQuad);
       }
    }
 }
 
 void close_submenu ()
 {
-   add_tween(0.01, -HSPACING * menu_active_category, &all_categories_x, &inOutQuad);
+   add_tween(DELAY, -HSPACING * menu_active_category, &all_categories_x, &inOutQuad);
    
    for (int i = 0; i < num_categories; i++) {
       if (i == menu_active_category) {
-         add_tween(0.01, 1.0, &categories[i].alpha, &inOutQuad);
-         add_tween(0.01, C_ACTIVE_ZOOM, &categories[i].zoom, &inOutQuad);
+         add_tween(DELAY, 1.0, &categories[i].alpha, &inOutQuad);
+         add_tween(DELAY, C_ACTIVE_ZOOM, &categories[i].zoom, &inOutQuad);
          for (int j = 0; j < categories[i].num_items; j++) {
             if (j == categories[i].active_item) {
-               add_tween(0.01, 1.0, &categories[i].items[j].alpha, &inOutQuad);
+               add_tween(DELAY, 1.0, &categories[i].items[j].alpha, &inOutQuad);
                for (int k = 0; k < categories[i].items[j].num_subitems; k++) {
-                  add_tween(0.01, 0, &categories[i].items[j].subitems[k].alpha, &inOutQuad);
+                  add_tween(DELAY, 0, &categories[i].items[j].subitems[k].alpha, &inOutQuad);
                }
             } else {
-               add_tween(0.01, 0.5, &categories[i].items[j].alpha, &inOutQuad);
+               add_tween(DELAY, 0.5, &categories[i].items[j].alpha, &inOutQuad);
             }
          }
       } else {
-         add_tween(0.01, 0.5, &categories[i].alpha, &inOutQuad);
-         add_tween(0.01, C_PASSIVE_ZOOM, &categories[i].zoom, &inOutQuad);
+         add_tween(DELAY, 0.5, &categories[i].alpha, &inOutQuad);
+         add_tween(DELAY, C_PASSIVE_ZOOM, &categories[i].zoom, &inOutQuad);
          for (int j = 0; j < categories[i].num_items; j++) {
-            add_tween(0.01, 0, &categories[i].items[j].alpha, &inOutQuad);
+            add_tween(DELAY, 0, &categories[i].items[j].alpha, &inOutQuad);
          }
       }
    }
@@ -326,6 +332,8 @@ struct font_rect
    int pot_width, pot_height;
 };
 
+/* font rendering */
+
 static void calculate_msg_geometry(const struct font_output *head, struct font_rect *rect)
 {
    int x_min = head->off_x;
@@ -380,7 +388,6 @@ static void adjust_power_of_two(gl_t *gl, struct font_rect *geom)
       gl->font_tex_h = geom->pot_height;
    }
 }
-
 
 static void copy_glyph(const struct font_output *head, const struct font_rect *geom, uint32_t *buffer, unsigned width, unsigned height)
 {
@@ -546,11 +553,12 @@ static void draw_text(void *data, struct font_output_list out, float x, float y,
    gl_set_projection(gl, &ortho, true);
 }
 
+// main display loop
 void lakka_draw(void *data)
 {
    // compute delta time between two frames
    timeSinceStart = (float)clock()/CLOCKS_PER_SEC;
-   float dt = 0.001; // timeSinceStart - oldTimeSinceStart; FIXME hardcoded dt
+   float dt = timeSinceStart - oldTimeSinceStart;
    oldTimeSinceStart = timeSinceStart;
 
    //printf("%f\n", 1.0/dt);
@@ -761,6 +769,22 @@ char * str_replace ( const char *string, const char *substr, const char *replace
    return newstr;
 }
 
+void textures_init(void *data)
+{
+   gl_t *gl = (gl_t*)data;
+
+   arrow_icon = png_texture_load("/usr/share/retroarch/arrow.png", &dim, &dim);
+   run_icon = png_texture_load("/usr/share/retroarch/run.png", &dim, &dim);
+   resume_icon = png_texture_load("/usr/share/retroarch/resume.png", &dim, &dim);
+   savestate_icon = png_texture_load("/usr/share/retroarch/savestate.png", &dim, &dim);
+   loadstate_icon = png_texture_load("/usr/share/retroarch/loadstate.png", &dim, &dim);
+   screenshot_icon = png_texture_load("/usr/share/retroarch/screenshot.png", &dim, &dim);
+   reload_icon = png_texture_load("/usr/share/retroarch/reload.png", &dim, &dim);
+
+   gl->font_driver->render_msg(gl->font, "Run", &run_label);
+   gl->font_driver->render_msg(gl->font, "Resume", &resume_label);
+}
+
 void menu_init(void)
 {
    rgui = rgui_init();
@@ -781,16 +805,7 @@ void menu_init(void)
 
    num_categories = rgui->core_info->count;
 
-   arrow_icon = png_texture_load("/usr/share/retroarch/arrow.png", &dim, &dim);
-   run_icon = png_texture_load("/usr/share/retroarch/run.png", &dim, &dim);
-   resume_icon = png_texture_load("/usr/share/retroarch/resume.png", &dim, &dim);
-   savestate_icon = png_texture_load("/usr/share/retroarch/savestate.png", &dim, &dim);
-   loadstate_icon = png_texture_load("/usr/share/retroarch/loadstate.png", &dim, &dim);
-   screenshot_icon = png_texture_load("/usr/share/retroarch/screenshot.png", &dim, &dim);
-   reload_icon = png_texture_load("/usr/share/retroarch/reload.png", &dim, &dim);
-
-   gl->font_driver->render_msg(gl->font, "Run", &run_label);
-   gl->font_driver->render_msg(gl->font, "Resume", &resume_label);
+   textures_init(gl);
 
    categories = realloc(categories, num_categories * sizeof(menu_category));
 
