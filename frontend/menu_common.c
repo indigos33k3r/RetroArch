@@ -645,7 +645,7 @@ void lakka_draw(void *data)
                draw_text(gl, 
                   categories[i].items[j].out, 
                   156 + HSPACING*(i+1) + all_categories_x + dim/2.0, 
-                  300 + categories[i].items[j].y + 15, 
+                  300 + categories[i].items[j].y + (22*categories[i].items[j].zoom), 
                   categories[i].items[j].zoom, 
                   categories[i].items[j].alpha);
          } else {
