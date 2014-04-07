@@ -841,66 +841,78 @@ void menu_init(void)
       gl->font_driver->render_msg(gl->font, mcat.name, &out);
       mcat.out = out;
       
-      struct string_list *list = dir_list_new(g_settings.rgui_browser_directory, corenfo.supported_extensions, true);
-      dir_list_sort(list, true);
+      init_items(i, &mcat, corenfo, gametexturepath, g_settings.rgui_browser_directory);
 
-      for (int j = 0; j < list->size; j++) {
-         if (! list->elems[j].attr.b) // exclude directories
-         {
-            int n = mcat.num_items;
-            mcat.num_items++;
-            mcat.items = realloc(mcat.items, mcat.num_items * sizeof(menu_item));
-
-            mcat.items[n].name  = path_basename(list->elems[j].data);
-            mcat.items[n].rom   = list->elems[j].data;
-            mcat.items[n].icon  = png_texture_load(gametexturepath, &dim, &dim);
-            mcat.items[n].alpha = i != menu_active_category ? 0 : n ? 0.5 : 1;
-            mcat.items[n].zoom  = n ? I_PASSIVE_ZOOM : I_ACTIVE_ZOOM;
-            mcat.items[n].y     = n ? VSPACING*(3+n) : VSPACING*2.5;
-            mcat.items[n].active_subitem = 0;
-            mcat.items[n].num_subitems   = 5;
-            mcat.items[n].subitems       = calloc(mcat.items[n].num_subitems, sizeof(menu_subitem));
-
-            for (int k = 0; k < mcat.items[n].num_subitems; k++) {
-               switch (k) {
-                  case 0:
-                     mcat.items[n].subitems[k].name = "Run";
-                     mcat.items[n].subitems[k].icon = run_icon;
-                     break;
-                  case 1:
-                     mcat.items[n].subitems[k].name = "Save State";
-                     mcat.items[n].subitems[k].icon = savestate_icon;
-                     break;
-                  case 2:
-                     mcat.items[n].subitems[k].name = "Load State";
-                     mcat.items[n].subitems[k].icon = loadstate_icon;
-                     break;
-                  case 3:
-                     mcat.items[n].subitems[k].name = "Take Screenshot";
-                     mcat.items[n].subitems[k].icon = screenshot_icon;
-                     break;
-                  case 4:
-                     mcat.items[n].subitems[k].name = "Reload";
-                     mcat.items[n].subitems[k].icon = reload_icon;
-                     break;
-               }
-               mcat.items[n].subitems[k].alpha = 0;
-               mcat.items[n].subitems[k].zoom = k == mcat.items[n].active_subitem ? I_ACTIVE_ZOOM : I_PASSIVE_ZOOM;
-               mcat.items[n].subitems[k].y = k == 0 ? VSPACING*2.5 : VSPACING*(3+k);
-               struct font_output_list out;
-               gl->font_driver->render_msg(gl->font, mcat.items[n].subitems[k].name, &out);
-               mcat.items[n].subitems[k].out = out;
-            }
-
-            struct font_output_list out;
-            gl->font_driver->render_msg(gl->font, mcat.items[n].name, &out);
-            mcat.items[n].out = out;
-         }
-      }
       categories[i] = mcat;
    }
 
    rgui->last_time = rarch_get_time_usec();
+}
+
+void init_items(int i, menu_category *mcat, core_info_t corenfo, char* gametexturepath, char* path)
+{
+   gl_t *gl = (gl_t*)driver.video_data;
+
+   struct string_list *list = dir_list_new(path, corenfo.supported_extensions, true);
+   dir_list_sort(list, true);
+
+   for (int j = 0; j < list->size; j++) {
+      if (list->elems[j].attr.b) // is a directory
+      {
+	 init_items(i, mcat, corenfo, gametexturepath, list->elems[j].data);
+      }
+      else
+      {
+         int n = mcat->num_items;
+         mcat->num_items++;
+         mcat->items = realloc(mcat->items, mcat->num_items * sizeof(menu_item));
+
+         mcat->items[n].name  = path_basename(list->elems[j].data);
+         mcat->items[n].rom   = list->elems[j].data;
+         mcat->items[n].icon  = png_texture_load(gametexturepath, &dim, &dim);
+         mcat->items[n].alpha = i != menu_active_category ? 0 : n ? 0.5 : 1;
+         mcat->items[n].zoom  = n ? I_PASSIVE_ZOOM : I_ACTIVE_ZOOM;
+         mcat->items[n].y     = n ? VSPACING*(3+n) : VSPACING*2.5;
+         mcat->items[n].active_subitem = 0;
+         mcat->items[n].num_subitems   = 5;
+         mcat->items[n].subitems       = calloc(mcat->items[n].num_subitems, sizeof(menu_subitem));
+
+         for (int k = 0; k < mcat->items[n].num_subitems; k++) {
+            switch (k) {
+               case 0:
+                  mcat->items[n].subitems[k].name = "Run";
+                  mcat->items[n].subitems[k].icon = run_icon;
+                  break;
+               case 1:
+                  mcat->items[n].subitems[k].name = "Save State";
+                  mcat->items[n].subitems[k].icon = savestate_icon;
+                  break;
+               case 2:
+                  mcat->items[n].subitems[k].name = "Load State";
+                  mcat->items[n].subitems[k].icon = loadstate_icon;
+                  break;
+               case 3:
+                  mcat->items[n].subitems[k].name = "Take Screenshot";
+                  mcat->items[n].subitems[k].icon = screenshot_icon;
+                  break;
+               case 4:
+                  mcat->items[n].subitems[k].name = "Reload";
+                  mcat->items[n].subitems[k].icon = reload_icon;
+                  break;
+            }
+            mcat->items[n].subitems[k].alpha = 0;
+            mcat->items[n].subitems[k].zoom = k == mcat->items[n].active_subitem ? I_ACTIVE_ZOOM : I_PASSIVE_ZOOM;
+            mcat->items[n].subitems[k].y = k == 0 ? VSPACING*2.5 : VSPACING*(3+k);
+            struct font_output_list out;
+            gl->font_driver->render_msg(gl->font, mcat->items[n].subitems[k].name, &out);
+            mcat->items[n].subitems[k].out = out;
+         }
+
+         struct font_output_list out;
+         gl->font_driver->render_msg(gl->font, mcat->items[n].name, &out);
+         mcat->items[n].out = out;
+      }
+   }
 }
 
 void menu_free(void)
