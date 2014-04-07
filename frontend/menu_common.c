@@ -1140,15 +1140,6 @@ bool menu_iterate(void)
 
    rarch_render_cached_frame();
 
-   // Throttle in case VSync is broken (avoid 1000+ FPS RGUI).
-   /*time = rarch_get_time_usec();
-   delta = (time - rgui->last_time) / 1000;
-   target_msec = 750 / g_settings.video.refresh_rate; // Try to sleep less, so we can hopefully rely on FPS logger.
-   sleep_msec = target_msec - delta;
-   if (sleep_msec > 0)
-      rarch_sleep((unsigned int)sleep_msec);
-   rgui->last_time = rarch_get_time_usec();*/
-
    // disable rendering of the menu
    if (driver.video_poke && driver.video_poke->set_texture_enable)
       driver.video_poke->set_texture_enable(driver.video_data, false, MENU_TEXTURE_FULLSCREEN);
