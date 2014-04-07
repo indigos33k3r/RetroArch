@@ -41,7 +41,7 @@
 #define C_PASSIVE_ZOOM 0.5
 #define I_ACTIVE_ZOOM 0.75
 #define I_PASSIVE_ZOOM 0.35
-#define DELAY 0.075
+#define DELAY 0.02
 
 const GLfloat background_color[] = {
    0.1, 0.74, 0.61, 0.75,
@@ -75,8 +75,6 @@ float all_categories_x = 0;
 
 rgui_handle_t *rgui;
 
-float timeSinceStart, oldTimeSinceStart;
-
 //forward decl
 static int menu_iterate_func(void *data, unsigned action);
 
@@ -91,12 +89,7 @@ void menu_init_core_info(void *data)
 
 static rgui_handle_t *rgui_init(void)
 {
-   clock_t t = clock();
-   timeSinceStart = ((float)t)/CLOCKS_PER_SEC;
-   oldTimeSinceStart = 0;
-
    rgui_handle_t *rgui = (rgui_handle_t*)calloc(1, sizeof(*rgui));
-
    return rgui;
 }
 
@@ -556,14 +549,17 @@ static void draw_text(void *data, struct font_output_list out, float x, float y,
 // main display loop
 void lakka_draw(void *data)
 {
-   // compute delta time between two frames
-   timeSinceStart = (float)clock()/CLOCKS_PER_SEC;
-   float dt = timeSinceStart - oldTimeSinceStart;
-   oldTimeSinceStart = timeSinceStart;
-
-   //printf("%f\n", 1.0/dt);
-
-   update_tweens(dt);
+   // Throttle in case VSync is broken (avoid 1000+ FPS RGUI).
+   rarch_time_t time, delta, target_msec, sleep_msec;
+   time = rarch_get_time_usec();
+   delta = (time - rgui->last_time) / 1000;
+   target_msec = 750 / g_settings.video.refresh_rate; // Try to sleep less, so we can hopefully rely on FPS logger.
+   sleep_msec = target_msec - delta;
+   if (sleep_msec > 0)
+      rarch_sleep((unsigned int)sleep_msec);
+   rgui->last_time = rarch_get_time_usec();
+   
+   update_tweens((float)delta/10000);
 
    gl_t *gl = (gl_t*)data;
 
@@ -1145,13 +1141,13 @@ bool menu_iterate(void)
    rarch_render_cached_frame();
 
    // Throttle in case VSync is broken (avoid 1000+ FPS RGUI).
-   time = rarch_get_time_usec();
+   /*time = rarch_get_time_usec();
    delta = (time - rgui->last_time) / 1000;
    target_msec = 750 / g_settings.video.refresh_rate; // Try to sleep less, so we can hopefully rely on FPS logger.
    sleep_msec = target_msec - delta;
    if (sleep_msec > 0)
       rarch_sleep((unsigned int)sleep_msec);
-   rgui->last_time = rarch_get_time_usec();
+   rgui->last_time = rarch_get_time_usec();*/
 
    // disable rendering of the menu
    if (driver.video_poke && driver.video_poke->set_texture_enable)
