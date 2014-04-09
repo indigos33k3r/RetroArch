@@ -54,6 +54,7 @@ menu_category* categories = NULL;
 
 int depth = 0;
 
+GLuint settings_icon;
 GLuint arrow_icon;
 GLuint run_icon;
 GLuint resume_icon;
@@ -769,6 +770,7 @@ void textures_init(void *data)
 {
    gl_t *gl = (gl_t*)data;
 
+   settings_icon = png_texture_load("/usr/share/retroarch/settings.png", &dim, &dim);
    arrow_icon = png_texture_load("/usr/share/retroarch/arrow.png", &dim, &dim);
    run_icon = png_texture_load("/usr/share/retroarch/run.png", &dim, &dim);
    resume_icon = png_texture_load("/usr/share/retroarch/resume.png", &dim, &dim);
@@ -799,13 +801,15 @@ void menu_init(void)
 
    menu_init_core_info(rgui);
 
-   num_categories = rgui->core_info->count;
+   num_categories = rgui->core_info ? rgui->core_info->count + 1 : 1;
 
    textures_init(gl);
 
    categories = realloc(categories, num_categories * sizeof(menu_category));
 
-   for (int i = 0; i < rgui->core_info->count; i++) {
+   init_settings();
+
+   for (int i = 0; i < num_categories-1; i++) {
       core_info_t corenfo = rgui->core_info->list[i];
 
       char core_id[256];
@@ -832,8 +836,8 @@ void menu_init(void)
       mcat.name        = corenfo.display_name;
       mcat.libretro    = corenfo.path;
       mcat.icon        = png_texture_load(texturepath, &dim, &dim);
-      mcat.alpha       = i == 0 ? 1.0 : 0.5;
-      mcat.zoom        = i == 0 ? C_ACTIVE_ZOOM : C_PASSIVE_ZOOM;
+      mcat.alpha       = 0.5;
+      mcat.zoom        = C_PASSIVE_ZOOM;
       mcat.active_item = 0;
       mcat.num_items   = 0;
       mcat.items       = calloc(mcat.num_items, sizeof(menu_item));
@@ -841,12 +845,30 @@ void menu_init(void)
       gl->font_driver->render_msg(gl->font, mcat.name, &out);
       mcat.out = out;
       
-      init_items(i, &mcat, corenfo, gametexturepath, g_settings.rgui_browser_directory);
+      init_items(i+1, &mcat, corenfo, gametexturepath, g_settings.rgui_browser_directory);
 
-      categories[i] = mcat;
+      categories[i+1] = mcat;
    }
 
    rgui->last_time = rarch_get_time_usec();
+}
+
+void init_settings()
+{
+   gl_t *gl = (gl_t*)driver.video_data;
+
+   menu_category mcat;
+   mcat.name = "Settings";
+   mcat.icon = settings_icon;
+   mcat.alpha = 1.0;
+   mcat.zoom = C_ACTIVE_ZOOM;
+   mcat.active_item = 0;
+   mcat.num_items   = 0;
+   mcat.items       = calloc(mcat.num_items, sizeof(menu_item));
+   struct font_output_list out;
+   gl->font_driver->render_msg(gl->font, mcat.name, &out);
+   mcat.out = out;
+   categories[0] = mcat;
 }
 
 void init_items(int i, menu_category *mcat, core_info_t corenfo, char* gametexturepath, char* path)
@@ -856,7 +878,9 @@ void init_items(int i, menu_category *mcat, core_info_t corenfo, char* gametextu
    struct string_list *list = dir_list_new(path, corenfo.supported_extensions, true);
    dir_list_sort(list, true);
 
-   for (int j = 0; j < list->size; j++) {
+   int num_items = list ? list->size : 0;
+
+   for (int j = 0; j < num_items; j++) {
       if (list->elems[j].attr.b) // is a directory
       {
 	 init_items(i, mcat, corenfo, gametexturepath, list->elems[j].data);
@@ -1042,7 +1066,7 @@ static int menu_iterate_func(void *data, unsigned action)
                   return -1;
                   break;
             }
-         } else if (depth == 0) {
+         } else if (depth == 0 && categories[menu_active_category].num_items) {
             open_submenu();
             depth = 1;
          }

@@ -271,6 +271,7 @@ typedef struct
    struct font_output_list out;
 } menu_category;
 
+void init_settings(void);
 void init_items(int i, menu_category *mcat, core_info_t corenfo, char* gametexturepath, char* path);
 
 void menu_init(void);
