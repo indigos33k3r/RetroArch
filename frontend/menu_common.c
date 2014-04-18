@@ -44,10 +44,10 @@
 #define DELAY 0.02
 
 const GLfloat background_color[] = {
-   0.1, 0.74, 0.61, 0.75,
-   0.1, 0.74, 0.61, 0.75,
-   0.1, 0.74, 0.61, 0.75,
-   0.1, 0.74, 0.61, 0.75,
+   0.1, 0.74, 0.61, 1.00,
+   0.1, 0.74, 0.61, 1.00,
+   0.1, 0.74, 0.61, 1.00,
+   0.1, 0.74, 0.61, 1.00,
 };
 
 menu_category* categories = NULL;
@@ -598,7 +598,7 @@ void lakka_draw(void *data)
                      resume_label, 
                      156 + HSPACING*(i+2) + all_categories_x + dim/2.0, 
                      300 + categories[i].items[j].subitems[k].y + 15, 
-                     categories[i].items[j].subitems[k].zoom, 
+                     1, 
                      categories[i].items[j].subitems[k].alpha);
                }
                else if (k == 0)
@@ -614,7 +614,7 @@ void lakka_draw(void *data)
                      run_label, 
                      156 + HSPACING*(i+2) + all_categories_x + dim/2.0, 
                      300 + categories[i].items[j].subitems[k].y + 15, 
-                     categories[i].items[j].subitems[k].zoom, 
+                     1, 
                      categories[i].items[j].subitems[k].alpha);
                } else if (g_extern.main_is_init && !g_extern.libretro_dummy && strcmp(g_extern.fullpath, categories[menu_active_category].items[categories[menu_active_category].active_item].rom) == 0)
                {
@@ -634,7 +634,7 @@ void lakka_draw(void *data)
                      categories[i].items[j].subitems[k].out, 
                      156 + HSPACING*(i+2) + all_categories_x + dim/2.0, 
                      300 + categories[i].items[j].subitems[k].y + 15, 
-                     categories[i].items[j].subitems[k].zoom, 
+                     1, 
                      categories[i].items[j].subitems[k].alpha);
                /*end*/
                }
@@ -646,8 +646,8 @@ void lakka_draw(void *data)
                draw_text(gl, 
                   categories[i].items[j].out, 
                   156 + HSPACING*(i+1) + all_categories_x + dim/2.0, 
-                  300 + categories[i].items[j].y + (22*categories[i].items[j].zoom), 
-                  categories[i].items[j].zoom, 
+                  300 + categories[i].items[j].y + 15, 
+                  1, 
                   categories[i].items[j].alpha);
          } else {
             draw_icon(gl,
@@ -671,7 +671,7 @@ void lakka_draw(void *data)
    }
 
    struct font_output_list msg = (depth == 0) ? categories[menu_active_category].out : categories[menu_active_category].items[categories[menu_active_category].active_item].out;
-   draw_text(gl, msg, 15.0, 35.0, 0.5, 1.0);
+   draw_text(gl, msg, 15.0, 40.0, 1, 1.0);
 
    gl_set_viewport(gl, gl->win_width, gl->win_height, false, false);
 }
