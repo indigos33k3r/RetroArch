@@ -146,7 +146,7 @@ typedef struct menu_display_ctx_driver
    void (*draw)(void *data);
    void (*draw_pipeline)(void *data);
    void (*viewport)(void *data);
-   void (*blend_begin)(void);
+   void (*blend_begin)(bool additive);
    void (*blend_end)(void);
    void (*restore_clear_color)(void);
    void (*clear_color)(menu_display_ctx_clearcolor_t *clearcolor);
@@ -178,7 +178,7 @@ enum menu_toggle_reason
 enum menu_toggle_reason menu_display_toggle_get_reason(void);
 void menu_display_toggle_set_reason(enum menu_toggle_reason reason);
 
-void menu_display_blend_begin(void);
+void menu_display_blend_begin(bool additive);
 void menu_display_blend_end(void);
 
 void menu_display_font_main_deinit(void);

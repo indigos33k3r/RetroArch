@@ -173,11 +173,11 @@ static void *menu_display_font_buf               = NULL;
 static msg_queue_t *menu_display_msg_queue       = NULL;
 static menu_display_ctx_driver_t *menu_disp      = NULL;
 
-void menu_display_blend_begin(void)
+void menu_display_blend_begin(bool additive)
 {
    if (!menu_disp || !menu_disp->blend_begin)
       return;
-   menu_disp->blend_begin();
+   menu_disp->blend_begin(additive);
 }
 
 void menu_display_blend_end(void)
@@ -680,7 +680,7 @@ void menu_display_draw_cursor(
    coords.lut_tex_coord = NULL;
    coords.color         = (const float*)color;
 
-   menu_display_blend_begin();
+   menu_display_blend_begin(false);
 
    draw.x               = x - (cursor_size / 2);
    draw.y               = (int)height - y - (cursor_size / 2);

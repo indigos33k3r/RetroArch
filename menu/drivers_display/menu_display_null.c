@@ -29,7 +29,7 @@ static void *menu_display_null_get_default_mvp(void)
    return NULL;
 }
 
-static void menu_display_null_blend_begin(void)
+static void menu_display_null_blend_begin(bool additive)
 {
 }
 

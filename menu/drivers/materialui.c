@@ -178,7 +178,7 @@ static void mui_draw_icon(
    struct video_coords coords;
    math_matrix_4x4 mymat;
 
-   menu_display_blend_begin();
+   menu_display_blend_begin(false);
 
    rotate_draw.matrix       = &mymat;
    rotate_draw.rotation     = rotation;
@@ -283,7 +283,7 @@ static void mui_render_quad(mui_handle_t *mui,
    coords.lut_tex_coord = NULL;
    coords.color         = coord_color;
 
-   menu_display_blend_begin();
+   menu_display_blend_begin(false);
 
    draw.x           = x;
    draw.y           = (int)height - y - (int)h;
@@ -751,7 +751,7 @@ static int mui_get_core_title(char *s, size_t len)
 
 static void mui_draw_bg(menu_display_ctx_draw_t *draw)
 {
-   menu_display_blend_begin();
+   menu_display_blend_begin(false);
 
    draw->x              = 0;
    draw->y              = 0;

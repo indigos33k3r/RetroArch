@@ -334,6 +334,8 @@ static void *gfx_ctx_x_init(void *data)
       GLX_ALPHA_SIZE       , 8,
       GLX_DEPTH_SIZE       , 0,
       GLX_STENCIL_SIZE     , 0,
+      GLX_SAMPLE_BUFFERS  , 1,            // <-- MSAA
+      GLX_SAMPLES         , 4,            // <-- MSAA
       None
    };
    GLXFBConfig *fbcs       = NULL;

@@ -56,8 +56,8 @@
 
 #include "../../tasks/tasks_internal.h"
 
-#define XMB_RIBBON_ROWS 64
-#define XMB_RIBBON_COLS 64
+#define XMB_RIBBON_ROWS 256
+#define XMB_RIBBON_COLS 256
 #define XMB_RIBBON_VERTICES 2*XMB_RIBBON_COLS*XMB_RIBBON_ROWS-2*XMB_RIBBON_COLS
 
 #ifndef XMB_DELAY
@@ -1766,7 +1766,7 @@ static void xmb_draw_items(xmb_handle_t *xmb,
    if (list == xmb->selection_buf_old)
       i = 0;
 
-   menu_display_blend_begin();
+   menu_display_blend_begin(false);
 
    for (; i < end; i++)
    {
@@ -2055,7 +2055,7 @@ static void xmb_draw_bg(
    draw.prim_type            = MENU_DISPLAY_PRIM_TRIANGLESTRIP;
    draw.pipeline.id          = 0;
 
-   menu_display_blend_begin();
+   menu_display_blend_begin(true);
    menu_display_set_viewport();
 
 #ifdef HAVE_SHADERPIPELINE
@@ -2141,7 +2141,7 @@ static void xmb_draw_dark_layer(
    draw.prim_type   = MENU_DISPLAY_PRIM_TRIANGLESTRIP;
    draw.pipeline.id = 0;
 
-   menu_display_blend_begin();
+   menu_display_blend_begin(false);
    menu_display_draw(&draw);
    menu_display_blend_end();
 }
@@ -2230,7 +2230,7 @@ static void xmb_frame(void *data)
    rotate_draw.scale_enable = true;
 
    menu_display_rotate_z(&rotate_draw);
-   menu_display_blend_begin();
+   menu_display_blend_begin(false);
 
    if (!string_is_equal(xmb_thumbnails_ident(), "OFF") && xmb->thumbnail)
       xmb_draw_thumbnail(xmb, &coord_white[0], width, height);
@@ -2290,7 +2290,7 @@ static void xmb_frame(void *data)
             &coord_white[0],
             xmb->shadow_offset);
 
-   menu_display_blend_begin();
+   menu_display_blend_begin(false);
 
    /* Horizontal tab icons */
    for (i = 0; i <= xmb_list_get_size(xmb, MENU_LIST_HORIZONTAL)
@@ -3259,7 +3259,7 @@ static void xmb_toggle(void *userdata, bool menu_on)
       return;
    }
 
-   entry.duration     = XMB_DELAY * 2;
+   entry.duration     = XMB_DELAY * 4;
    entry.target_value = 1.0f;
    entry.subject      = &xmb->alpha;
    entry.easing_enum  = EASING_OUT_QUAD;

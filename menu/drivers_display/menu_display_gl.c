@@ -79,12 +79,15 @@ static GLenum menu_display_prim_to_gl_enum(
    return 0;
 }
 
-static void menu_display_gl_blend_begin(void)
+static void menu_display_gl_blend_begin(bool additive)
 {
    video_shader_ctx_info_t shader_info;
 
    glEnable(GL_BLEND);
-   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+   if (additive)
+      glBlendFunc(GL_ONE, GL_ONE);
+   else
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
    shader_info.data = NULL;
    shader_info.idx  = VIDEO_SHADER_STOCK_BLEND;
